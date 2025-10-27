@@ -12,11 +12,10 @@ dependencies:
     # Quantum Simulation with Pennylane and Lightning backend
     - pennylane
     - pennylane-lightning
+    
+    # Task-based parallelism
+    - ray
 
     # Dev and Analysis Tools
     - jupyter
     - pytest
-
-    # Pip-installed packages for task-based parallelism
-    - pip:
-        - ray
