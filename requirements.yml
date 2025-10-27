@@ -1,0 +1,22 @@
+name: vqe-hpc-env
+channels:
+    - conda-forge
+dependencies:
+    # Core Python and HPC/Scientific Compute
+    - python=3.11
+    - pip
+    - numpy
+    - scipy
+    - matplotlib
+
+    # Quantum Simulation with Pennylane and Lightning backend
+    - pennylane
+    - pennylane-lightning
+
+    # Dev and Analysis Tools
+    - jupyter
+    - pytest
+
+    # Pip-installed packages for task-based parallelism
+    - pip:
+        - ray
