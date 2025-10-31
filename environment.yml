@@ -14,7 +14,7 @@ dependencies:
     - pennylane-lightning
     
     # Task-based parallelism
-    - ray
+    # - ray
 
     # Dev and Analysis Tools
     - jupyter
