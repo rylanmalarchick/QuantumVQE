@@ -3,19 +3,23 @@ channels:
     - conda-forge
 dependencies:
     # Core Python and HPC/Scientific Compute
-    - python=3.11
+    - python=3.12
     - pip
     - numpy
     - scipy
     - matplotlib
 
-    # Quantum Simulation with Pennylane and Lightning backend
-    - pennylane
-    - pennylane-lightning
-    
     # Task-based parallelism
     # - ray
 
     # Dev and Analysis Tools
     - jupyter
     - pytest
+
+    - pip:
+        - pennylane
+        - jax
+        - jaxlib
+        - pennylane-catalyst
+
+    
