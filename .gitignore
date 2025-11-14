@@ -1,4 +1,4 @@
-led / optimized / C extension files
+# Compiled / optimized / C extension files
 __pycache__/
 *.py[cod]
 *$py.class
@@ -45,3 +45,57 @@ venv.bak/
 .idea/
 .vscode/
 
+# LaTeX auxiliary files
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.lof
+*.lot
+*.nav
+*.snm
+*.vrb
+*.bcf
+*.run.xml
+
+# HPC and PBS job output
+*.o[0-9]*
+*.e[0-9]*
+*.po[0-9]*
+*.pe[0-9]*
+output.log
+error.log
+slurm-*.out
+
+# Python profiling and performance
+*.prof
+*.lprof
+*.pstats
+profile_*.txt
+
+# Temporary and backup files
+*~
+*.swp
+*.swo
+*.bak
+*.tmp
+.DS_Store
+
+# Python cache and pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Ray distributed computing
+/tmp/ray/
+ray_results/
+
+# Output images and results (keep tracked in results/)
+# Uncomment if you want to ignore generated plots
+# *.png
+# *.pdf
