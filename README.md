@@ -30,7 +30,7 @@ where $|\psi(\theta)\rangle$ is the quantum state prepared by our ansatz and $H$
 
 ## Setup
 
-The environment uses Micromamba (lightweight conda) with the following dependencies:
+The environment includes the following dependencies:
 - Python 3.12
 - PennyLane 0.43.1
 - JAX 0.6.2
@@ -39,21 +39,23 @@ The environment uses Micromamba (lightweight conda) with the following dependenc
 
 **Install and activate environment:**
 ```bash
-# Environment already installed in ./env/
-# Run code using:
-./bin/micromamba run -p ./env python3 src/main.py
+# Create environment from environment.yml
+conda env create -f environment.yml
+
+# Activate the environment
+conda activate quantumvqe
 ```
 
 ## Running the Code
 
 **Test run** (5 bond lengths, 50 iterations, ~2 seconds):
 ```bash
-./bin/micromamba run -p ./env python3 src/test_main.py
+python src/test_main.py
 ```
 
 **Full run** (40 bond lengths, 200 iterations, ~1 minute):
 ```bash
-./bin/micromamba run -p ./env python3 src/main.py
+python src/main.py
 ```
 
 Results are saved as PNG images in `results/`:
@@ -82,8 +84,7 @@ QuantumVQE/
 ├── results/            # Output plots
 ├── configs/            # Configuration files
 ├── pbs_scripts/        # PBS job submission templates
-├── environment.yml     # Conda environment specification
-└── bin/micromamba      # Package manager
+└── environment.yml     # Conda environment specification
 ```
 
 ## Algorithm Overview
