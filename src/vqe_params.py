@@ -1,0 +1,22 @@
+SYMBOLS = ["H", "H"]
+ELECTRONS = 2
+QUBITS = 4
+MAX_STEPS = 300
+STEP_SIZE = 0.05
+
+START_DIST = 0.3
+END_DIST = 3
+NUM_POINTS = 100
+
+# Additional common parameters
+METHOD = "dhf"
+UNIT = "angstrom"
+OPTIMIZER_STEP_SIZE = 0.01
+TEST_MAX_STEPS = 50
+
+
+
+DUMMY_BOND_LENGTH = 1.0
+
+PLOT_FIGSIZE = (10, 6)
+PLOT_DPI = 150

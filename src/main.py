@@ -5,33 +5,30 @@ import matplotlib
 matplotlib.use('Agg')  # Non-interactive backend
 import matplotlib.pyplot as plt
 import time
+from vqe_params import *
 
-
-#Define QML device  
-dev = qml.device("lightning.qubit", wires=4)
+#Define QML device
+dev = qml.device("lightning.qubit", wires=QUBITS)
 #Initialize Molecule parameters and Hamiltonian in global scope
 H = None
-qubits = 4
-symbols = ["H", "H"]
-electrons = 2 
 
 # Define Ansatz, the quantum circuit representing our molecule
 # hf state is required for the ansatz, doesnt change with distance
-hf_state = qchem.hf_state(electrons, qubits)
+hf_state = qchem.hf_state(ELECTRONS, QUBITS)
 # Get total number of parameters needed
-singles, doubles = qchem.excitations(electrons, qubits)
+singles, doubles = qchem.excitations(ELECTRONS, QUBITS)
 n_params = len(singles) + len(doubles)
 
 # Define the ansatz function
 def ansatz(params):
     """The quantum circuit template (ansatz)."""
-    qml.BasisState(hf_state, wires=range(qubits))
-    
+    qml.BasisState(hf_state, wires=range(QUBITS))
+
     #Double Excitation for H2 is good, more general is allsinglesdoubles. 
     #Using Doubleexcitation, params has only one parameter
     
     #qml.AllSinglesDoubles(params, wires=range(qubits), hf_state=hf_state,  doubles=doubles)
-    qml.DoubleExcitation(params[0], wires=range(qubits))
+    qml.DoubleExcitation(params[0], wires=range(QUBITS))
     
 #Define Cost Function. 
 # This applies the ansatz 
@@ -41,7 +38,7 @@ def cost_fn(params):
     return qml.expval(H)
 
 # Get the Hartree-Fock state (our starting point)
-hf_state = qchem.hf_state(electrons, 4)
+hf_state = qchem.hf_state(ELECTRONS, QUBITS)
 
     
 
@@ -49,15 +46,15 @@ def main():
     #Ensure that Global Hamiltonian is used
     global H
     # Define the trial bond length
-    bond_lengths = np.linspace(0.1, 3, num=40) # in angstroms
+    bond_lengths = np.linspace(START_DIST, END_DIST, NUM_POINTS) # in angstroms
     energies = np.zeros_like(bond_lengths)
     
     print("="*60)
     print("FULL RUN - Serial VQE Code for H2 Molecule")
     print("="*60)
     print(f"Bond lengths to scan: {len(bond_lengths)}")
-    print(f"VQE iterations per bond length: 200")
-    print(f"Total circuit evaluations: {len(bond_lengths) * 200}")
+    print(f"VQE iterations per bond length: {MAX_STEPS}")
+    print(f"Total circuit evaluations: {len(bond_lengths) * MAX_STEPS}")
     print("="*60)
     
     start_time = time.time()
@@ -73,18 +70,18 @@ def main():
         coordinates = np.array([[0.0, 0.0, -bl / 2], [0.0,0.0, bl/2]])
         #Define the molecule as a qchem object
         # Basis chosen might be significant, default is sto-3g
-        hydrogen = qchem.Molecule(symbols, coordinates, unit="angstrom")
+        hydrogen = qchem.Molecule(SYMBOLS, coordinates, unit=UNIT)
         #use qchem to generate the hamiltonian from this molecule
         # Dhf method is built in Hartee-Fock solver
-        H, _ = qchem.molecular_hamiltonian(hydrogen, method="dhf")
-        
+        H, _ = qchem.molecular_hamiltonian(hydrogen, method=METHOD)
+
         # Optimize paramters with VQE
         # Start from fresh parameters
         params = np.zeros(n_params, requires_grad=True)
-        opt = qml.AdamOptimizer(stepsize=0.01)
-        
+        opt = qml.AdamOptimizer(stepsize=OPTIMIZER_STEP_SIZE)
+
     # Inner loop: The VQE optimization
-        for n in range(200): # 200 optimization steps
+        for n in range(MAX_STEPS): # 200 optimization steps
             params, _ = opt.step_and_cost(cost_fn, params)
             
         # 4. Store the converged energy
@@ -114,8 +111,8 @@ def main():
     print("="*60)
     print(f"Total runtime: {total_time:.2f} seconds ({total_time/60:.2f} minutes)")
     print(f"Avg time per bond length: {total_time/len(bond_lengths):.2f} seconds")
-    print(f"Avg time per VQE iteration: {total_time/(len(bond_lengths)*200):.4f} seconds")
-    print(f"Circuit evaluations per second: {(len(bond_lengths)*200)/total_time:.2f}")
+    print(f"Avg time per VQE iteration: {total_time/(len(bond_lengths)*MAX_STEPS):.4f} seconds")
+    print(f"Circuit evaluations per second: {(len(bond_lengths)*MAX_STEPS)/total_time:.2f}")
     print("="*60)
     
   
