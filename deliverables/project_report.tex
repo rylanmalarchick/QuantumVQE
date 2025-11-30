@@ -1,0 +1,484 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+% Command to mark sections that need parallel implementation results
+\newcommand{\needsresults}[1]{\textcolor{red}{[NEEDS PARALLEL RESULTS: #1]}}
+
+\title{Parallelizing the Variational Quantum Eigensolver: \\
+High Performance Computing for Molecular H$_2$ Ground State Energy}
+
+\author{
+Ashton Steed and Rylan Malarchick \\
+MA453 - High Performance Computing \\
+Fall 2025
+}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+The Variational Quantum Eigensolver (VQE) is a hybrid quantum-classical algorithm used to compute ground state energies of molecular systems. This project implements VQE to calculate the potential energy surface of the hydrogen molecule (H$_2$) across 40 bond lengths using the PennyLane quantum computing framework. We present a baseline serial implementation achieving 157.98 circuit evaluations per second with a total runtime of 50.64 seconds. The algorithm exhibits embarrassingly parallel structure in its outer loop over bond lengths, enabling straightforward parallelization strategies. We propose and \needsresults{will implement} a three-phase optimization approach using JAX JIT compilation, Python multiprocessing, and distributed Ray computing to achieve expected speedups of up to 18.87$\times$ on 40 processors according to Amdahl's law predictions.
+\end{abstract}
+
+\section{Introduction}
+
+\subsection{Background}
+
+Quantum chemistry calculations help us understand how molecules are structured, how chemical reactions occur, and what properties materials have. A central problem in computational chemistry is finding the ground state energy (lowest energy configuration) and wavefunction (quantum state description) of a molecule. However, exact quantum mechanical calculations become exponentially harder as molecules get larger, making traditional computer methods impractical for large molecules.
+
+The Variational Quantum Eigensolver (VQE) is a promising quantum algorithm that combines both quantum and classical computing \cite{peruzzo2014}. Unlike purely quantum algorithms that need perfect quantum computers, VQE works on today's noisy quantum computers. The algorithm uses a quantum circuit (called an ansatz) with adjustable parameters to create trial wavefunctions on a quantum processor, while a classical computer adjusts these parameters to find the lowest energy.
+
+For this project, we focus on the hydrogen molecule (H$_2$), the simplest neutral molecule, which serves as a benchmark system for quantum chemistry methods. Despite its simplicity, H$_2$ exhibits key features of chemical bonding including equilibrium bond length, dissociation energy, and potential energy surface structure.
+
+\subsection{Issues and Questions to be Addressed}
+
+This project addresses two primary questions:
+
+\begin{enumerate}
+\item \textbf{Quantum Chemistry}: Can VQE accurately compute the H$_2$ potential energy surface using a minimal ansatz with a single variational parameter?
+
+\item \textbf{High Performance Computing}: How effectively can the VQE algorithm be parallelized to reduce computational time, and what speedups can be achieved through JIT compilation, multiprocessing, and distributed computing on HPC clusters?
+\end{enumerate}
+
+The serial implementation provides a performance baseline, while the parallel implementation \needsresults{will demonstrate} scaling behavior and efficiency gains relevant to larger quantum chemistry calculations.
+
+\section{Problem Description}
+
+\subsection{The Molecular Hamiltonian Problem}
+
+The goal is to compute the ground state energy $E_0$ of the H$_2$ molecule as a function of internuclear distance $d$. The electronic Hamiltonian in the Born-Oppenheimer approximation is:
+
+\begin{equation}
+H = -\frac{1}{2}\sum_{i=1}^{2}\nabla_i^2 - \sum_{i=1}^{2}\left(\frac{1}{|\mathbf{r}_i - \mathbf{R}_A|} + \frac{1}{|\mathbf{r}_i - \mathbf{R}_B|}\right) + \frac{1}{|\mathbf{r}_1 - \mathbf{r}_2|} + \frac{1}{d}
+\end{equation}
+
+where $\mathbf{r}_i$ are electron positions, $\mathbf{R}_A$ and $\mathbf{R}_B$ are nuclear positions separated by distance $d$, and atomic units are used.
+
+This continuous-space Hamiltonian must be converted to a finite basis set (we use STO-3G, a minimal basis set) and then transformed into qubit operators that quantum computers can work with using a method called the Jordan-Wigner transformation.
+
+\subsection{Computational Task}
+
+The specific computational problem is:
+
+\begin{itemize}
+\item \textbf{Input}: Set of bond lengths $\{d_1, \ldots, d_{40}\}$ uniformly spaced from 0.1 to 3.0 \AA
+\item \textbf{Output}: Ground state energies $\{E_1, \ldots, E_{40}\}$ at each bond length
+\item \textbf{Constraint}: Each energy must converge to sufficient accuracy (200 VQE iterations)
+\item \textbf{Objective}: Minimize total wall-clock time while maintaining accuracy
+\end{itemize}
+
+The key computational challenge is that each bond length requires:
+\begin{itemize}
+\item Hartree-Fock calculation to generate molecular Hamiltonian
+\item 200 quantum circuit evaluations with gradient computation
+\item Parameter updates via Adam optimizer
+\end{itemize}
+
+This results in 8,000 total circuit evaluations taking approximately 50 seconds in the serial implementation.
+
+\section{Model Formulation}
+
+\subsection{The Variational Principle}
+
+VQE uses the variational principle from quantum mechanics: for any trial wavefunction $|\psi(\theta)\rangle$ with adjustable parameters $\theta$, the energy we calculate will always be greater than or equal to the true ground state energy:
+
+\begin{equation}
+E(\theta) = \langle \psi(\theta) | H | \psi(\theta) \rangle \geq E_0
+\end{equation}
+
+where $E_0$ is the true ground state energy and $H$ is the molecular Hamiltonian. By finding the parameters $\theta$ that give the lowest energy $E(\theta)$, we get a good approximation to the true ground state.
+
+\subsection{Molecular Hamiltonian in Second Quantization}
+
+For the H$_2$ molecule, the electronic Hamiltonian in second quantization is:
+
+\begin{equation}
+H = \sum_{i,j} h_{ij} a_i^\dagger a_j + \frac{1}{2}\sum_{i,j,k,\ell} h_{ij k\ell} a_i^\dagger a_j^\dagger a_k a_\ell
+\end{equation}
+
+where:
+\begin{itemize}
+\item $h_{ij}$ are one-electron integrals (kinetic energy and nuclear attraction)
+\item $h_{ij k\ell}$ are two-electron integrals (electron-electron repulsion)
+\item $a_i^\dagger, a_i$ are fermionic creation and annihilation operators
+\end{itemize}
+
+These integrals are computed using the Hartree-Fock method with the STO-3G basis set, then mapped to Pauli operators on 4 qubits via the Jordan-Wigner transformation.
+
+\subsection{Quantum Circuit Ansatz}
+
+The trial wavefunction is prepared using a parameterized quantum circuit:
+
+\begin{equation}
+|\psi(\theta)\rangle = U(\theta) |\text{HF}\rangle
+\end{equation}
+
+where:
+\begin{itemize}
+\item $|\text{HF}\rangle = |1100\rangle$ is the Hartree-Fock reference state (both electrons in lowest spatial orbital with opposite spins)
+\item $U(\theta)$ is a unitary operator implemented as a double excitation gate
+\end{itemize}
+
+The double excitation gate is:
+
+\begin{equation}
+U(\theta) = \exp\left(-i\frac{\theta}{2}(a_0^\dagger a_1^\dagger a_2 a_3 - a_3^\dagger a_2^\dagger a_1 a_0)\right)
+\end{equation}
+
+This ansatz captures the most important electron correlation effects in H$_2$ (both electrons moving together from bonding to antibonding orbitals) while only needing a single adjustable parameter $\theta$.
+
+\subsection{Optimization Problem}
+
+The VQE algorithm finds the parameter value that gives the lowest energy:
+
+\begin{equation}
+\theta^* = \arg\min_\theta E(\theta) = \arg\min_\theta \langle \psi(\theta) | H | \psi(\theta) \rangle
+\end{equation}
+
+We use the Adam optimizer with:
+\begin{itemize}
+\item Learning rate: $\alpha = 0.01$
+\item Iterations per bond configuration: $N_{\text{iter}} = 200$
+\item Initial parameter: $\theta_0 = 0$ (starts at Hartree-Fock state)
+\end{itemize}
+
+\section{Methods}
+
+\subsection{Problem Structure and Parallelization Opportunities}
+
+The computational task consists of computing the potential energy surface by evaluating $E(\theta^*)$ for $N_b = 40$ bond lengths in the range $[0.1, 3.0]$ \AA. For each bond length $d_i$:
+
+\begin{enumerate}
+\item Generate molecular Hamiltonian $H(d_i)$ using Hartree-Fock
+\item Initialize variational parameters $\theta_0 = 0$
+\item Optimize: $\theta^*_i = \text{Adam}(E(\theta), \theta_0, N_{\text{iter}} = 200)$
+\item Store ground state energy $E_i = E(\theta^*_i)$
+\end{enumerate}
+
+The key insight is that these calculations are \textbf{embarrassingly parallel}---each bond length calculation is completely independent and doesn't need data from other calculations:
+
+\begin{equation}
+E_i = f(d_i) \quad \text{for } i = 1, \ldots, 40
+\end{equation}
+
+where $f$ is the VQE optimization procedure.
+
+\subsection{Serial Algorithm Implementation}
+
+The baseline serial implementation follows Algorithm~\ref{alg:serial}.
+
+\begin{algorithm}
+\caption{Serial VQE for H$_2$ Potential Energy Surface}
+\label{alg:serial}
+\begin{algorithmic}[1]
+\State \textbf{Input:} Bond lengths $\{d_1, \ldots, d_{40}\}$
+\State \textbf{Output:} Energies $\{E_1, \ldots, E_{40}\}$
+\State
+\State Initialize quantum device: \texttt{lightning.qubit} with 4 qubits
+\State Define ansatz with Hartree-Fock initialization
+\State
+\For{$i = 1$ to $40$}
+    \State Generate $H(d_i)$ using Hartree-Fock (STO-3G basis)
+    \State $\theta \gets 0$
+    \State Initialize Adam optimizer with $\alpha = 0.01$
+    \For{$j = 1$ to $200$}
+        \State $E \gets \langle \psi(\theta) | H(d_i) | \psi(\theta) \rangle$ \Comment{Quantum circuit evaluation}
+        \State $\nabla_\theta E \gets$ compute gradient via parameter-shift rule
+        \State $\theta \gets \text{Adam\_step}(\theta, \nabla_\theta E)$
+    \EndFor
+    \State $E_i \gets E(\theta)$ \Comment{Store converged energy}
+\EndFor
+\State \Return $\{E_1, \ldots, E_{40}\}$
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Implementation Details:}
+\begin{itemize}
+\item \textbf{Framework}: PennyLane 0.43.1 with Lightning device (CPU simulator)
+\item \textbf{Basis Set}: STO-3G minimal basis (4 spin-orbitals $\rightarrow$ 4 qubits)
+\item \textbf{Hamiltonian Method}: DHF (built-in Hartree-Fock solver)
+\item \textbf{Device}: PennyLane Lightning simulator (optimized CPU backend)
+\item \textbf{Gradient Method}: Automatic differentiation via PennyLane
+\end{itemize}
+
+\subsection{Computational Complexity}
+
+Each quantum circuit evaluation requires $O(4^n)$ operations for an $n$-qubit system using classical simulation. For our 4-qubit system:
+
+\begin{itemize}
+\item State vector dimension: $2^4 = 16$ complex amplitudes
+\item Operations per circuit: $O(16^2) = O(256)$ for state preparation and measurement
+\item Gradient evaluations: 2 circuit evaluations per parameter (parameter-shift rule)
+\item Circuit evaluations per bond length: $\sim$200--400 (optimization + gradients)
+\item Total circuit evaluations: $\sim$8,000--16,000
+\end{itemize}
+
+\subsection{Proposed Parallelization Approaches}
+
+We propose a three-phase optimization strategy:
+
+\subsubsection{Phase 1: JIT Compilation with JAX}
+
+\textbf{Method}: Apply just-in-time (JIT) compilation to the cost function using JAX integration in PennyLane.
+
+\textbf{Implementation}:
+\begin{verbatim}
+import jax
+dev = qml.device("lightning.qubit", wires=4)
+
+@jax.jit
+@qml.qnode(dev, interface="jax")
+def cost_fn(params):
+    ansatz(params)
+    return qml.expval(H)
+\end{verbatim}
+
+\textbf{Expected Speedup}: 2--5$\times$ from:
+\begin{itemize}
+\item Pre-compiling the circuit for faster execution
+\item Combining operations to reduce memory access time
+\item Computing gradients more efficiently using vector operations
+\end{itemize}
+
+\subsubsection{Phase 2: Shared-Memory Parallelism}
+
+\textbf{Method}: Use Python \texttt{multiprocessing} to parallelize the outer loop over bond lengths.
+
+\textbf{Implementation Strategy}:
+\begin{verbatim}
+from multiprocessing import Pool
+
+def compute_energy_at_distance(bond_length):
+    # Full VQE optimization for one bond length
+    return bond_length, energy
+
+with Pool(processes=8) as pool:
+    results = pool.map(compute_energy_at_distance, bond_lengths)
+\end{verbatim}
+
+\textbf{Expected Speedup}: $0.8p$ for $p$ cores (slightly less than ideal due to communication overhead)
+
+\subsubsection{Phase 3: Distributed-Memory Parallelism with Ray}
+
+\textbf{Method}: Use Ray distributed computing framework to scale across HPC cluster nodes.
+
+\textbf{Implementation Strategy}:
+\begin{verbatim}
+import ray
+
+@ray.remote
+def compute_energy_remote(bond_length):
+    # VQE optimization on remote worker
+    return energy
+
+ray.init(address='auto')  # Connect to cluster
+futures = [compute_energy_remote.remote(d) for d in bond_lengths]
+energies = ray.get(futures)
+\end{verbatim}
+
+\textbf{Expected Speedup}: Near-linear scaling up to $p = 40$ nodes (one per bond length)
+
+\subsection{Performance Prediction Model}
+
+Using Amdahl's law to predict strong scaling with $p$ processors:
+
+\begin{equation}
+S_p = \frac{1}{f_s + \frac{f_p}{p}}
+\end{equation}
+
+where:
+\begin{itemize}
+\item $f_s \approx 0.05$ is the serial fraction (initialization, I/O, plotting)
+\item $f_p \approx 0.95$ is the parallel fraction (VQE optimizations)
+\end{itemize}
+
+Predicted speedups are shown in Table~\ref{tab:predictions}.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrr}
+\toprule
+\textbf{Processors} & \textbf{Ideal Speedup} & \textbf{Predicted Speedup} \\
+\midrule
+4 & 4.0$\times$ & 3.48$\times$ \\
+8 & 8.0$\times$ & 6.15$\times$ \\
+16 & 16.0$\times$ & 10.39$\times$ \\
+40 & 40.0$\times$ & 18.87$\times$ \\
+\bottomrule
+\end{tabular}
+\caption{Predicted parallel speedup using Amdahl's law with $f_s = 0.05$.}
+\label{tab:predictions}
+\end{table}
+
+\section{Solution}
+
+\subsection{Serial Implementation Results}
+
+The serial VQE implementation successfully computed the H$_2$ potential energy surface across 40 bond lengths. Performance metrics are shown in Table~\ref{tab:serial_performance}.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lr}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Total Runtime & 50.64 seconds \\
+Time per Bond Length & 1.27 seconds \\
+Time per VQE Iteration & 6.3 ms \\
+Circuit Evaluations/sec & 157.98 \\
+Total Circuit Evaluations & 8,000 \\
+\bottomrule
+\end{tabular}
+\caption{Serial implementation performance metrics.}
+\label{tab:serial_performance}
+\end{table}
+
+The potential energy curve exhibits the expected physical behavior for H$_2$:
+\begin{itemize}
+\item Bonding region at small bond lengths ($d < 0.74$ \AA)
+\item Equilibrium bond length near $d_{\text{eq}} \approx 0.74$ \AA
+\item Dissociation to separated atoms at large distances ($d > 2.5$ \AA)
+\end{itemize}
+
+Figure~\ref{fig:serial_pes} shows the computed potential energy surface.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{../results/vqe_results.png}
+\caption{H$_2$ potential energy surface computed with serial VQE implementation. The curve shows the characteristic bonding minimum near 0.74 \AA\ and dissociation behavior at large bond lengths.}
+\label{fig:serial_pes}
+\end{figure}
+
+\subsection{Parallel Implementation Results}
+
+\needsresults{This section will contain results from the three-phase parallelization:}
+
+\begin{itemize}
+\item \needsresults{JAX JIT compilation speedup measurements}
+\item \needsresults{Multiprocessing scaling results (1, 2, 4, 8 cores)}
+\item \needsresults{Ray distributed computing results on HPC cluster}
+\item \needsresults{Strong scaling plots showing speedup vs. number of processors}
+\item \needsresults{Efficiency analysis comparing actual vs. predicted performance}
+\end{itemize}
+
+\section{Discussion}
+
+\subsection{Physical Interpretation of Results}
+
+The computed potential energy surface captures the essential quantum chemistry of the H$_2$ molecule:
+
+\textbf{Equilibrium Geometry:} The minimum energy occurs near $d_{\text{eq}} \approx 0.74$ \AA, which matches the experimental bond length of 0.741 \AA\ for ground state H$_2$. This close agreement shows that our VQE approach and choice of ansatz work well.
+
+\textbf{Bonding Energy:} At equilibrium, the VQE energy is approximately $E_{\text{eq}} \approx -1.137$ Hartree (from the plotted curve). The exact energy for H$_2$ in the STO-3G basis is $-1.1372$ Hartree, showing our single-parameter ansatz achieves excellent accuracy.
+
+\textbf{Dissociation Behavior:} As bond length increases beyond 2.5 \AA, the energy approaches the limit where the two hydrogen atoms are separated. The curve shows the expected gradual approach to this limit, though our simple single-parameter ansatz has known limitations in accurately describing the dissociation region where electron correlation becomes very strong.
+
+\textbf{Ansatz Effectiveness:} The double excitation ansatz with a single parameter works remarkably well for H$_2$ near equilibrium. This is because the most important correlation effect is both electrons moving together from the bonding ($\sigma$) to antibonding ($\sigma^*$) orbital, which is exactly what the double excitation operator captures.
+
+\subsection{Computational Performance Analysis}
+
+\textbf{Serial Baseline:} The serial implementation achieves 157.98 circuit evaluations per second, with each full VQE optimization (200 iterations) taking approximately 1.27 seconds. This establishes a solid baseline for parallel comparison.
+
+\textbf{Bottleneck Identification:} Analysis shows that more than 95\% of runtime is spent in the VQE optimization loops (running quantum circuits and computing gradients), with very little time spent on other tasks like generating the Hamiltonian or writing output files. This high fraction of parallelizable work ($f_p \approx 0.95$) is ideal for getting good speedups from parallelization.
+
+\textbf{Scalability Potential:} The embarrassingly parallel structure of the outer loop means each bond length calculation can run independently without needing to communicate with other calculations. This allows for near-perfect scaling in the ideal case, limited only by:
+\begin{itemize}
+\item Serial fraction (startup time, plotting results)
+\item Load balancing (some bond lengths might take longer to converge than others)
+\item Communication overhead in distributed implementation
+\end{itemize}
+
+\subsection{Relevance to Original Questions}
+
+\textbf{Question 1: VQE Accuracy}
+
+Our results show that VQE with a simple ansatz successfully computes the H$_2$ potential energy surface with high accuracy near equilibrium. The single-parameter double excitation ansatz is sufficient for this simple molecule, confirming that the variational approach works well. This gives us confidence that the method can be extended to larger molecules with more complex ansatzes.
+
+\textbf{Question 2: HPC Parallelization}
+
+The serial implementation shows an embarrassingly parallel problem structure with more than 95\% of runtime in independent bond length calculations. Using Amdahl's law, we predict significant speedups (18.87$\times$ on 40 processors), making this an excellent candidate for HPC optimization.
+
+\needsresults{Once parallel implementations are complete, we will compare actual speedups against predictions, analyze where efficiency is lost, and identify the best parallelization strategies for quantum chemistry VQE calculations.}
+
+\section{Conclusions}
+
+This project successfully implemented and analyzed the Variational Quantum Eigensolver algorithm for computing the hydrogen molecule potential energy surface. Key conclusions include:
+
+\begin{enumerate}
+\item \textbf{Algorithm Validation:} The VQE implementation with a single-parameter double excitation ansatz accurately reproduces the H$_2$ potential energy surface, achieving near-exact energies at equilibrium bond lengths ($\sim$-1.137 Ha at 0.74 \AA).
+
+\item \textbf{Baseline Performance:} The serial implementation establishes clear performance metrics: 50.64 seconds total runtime, 157.98 circuit evaluations per second, and 1.27 seconds per bond length.
+
+\item \textbf{Parallelization Opportunities:} The algorithm has excellent parallelization potential with more than 95\% of runtime in embarrassingly parallel outer loop calculations. This structure makes parallelization straightforward.
+
+\item \textbf{Predicted Speedups:} Theoretical analysis using Amdahl's law predicts speedups of 3.48$\times$ (4 cores), 6.15$\times$ (8 cores), and 18.87$\times$ (40 cores), suggesting significant performance gains are achievable.
+
+\item \textbf{Methodology for Scaling:} We identified a three-phase optimization strategy: (1) JAX JIT compilation for 2--5$\times$ gains, (2) multiprocessing for shared-memory parallelism, and (3) Ray distributed computing for cluster-scale parallelization.
+\end{enumerate}
+
+\needsresults{Future work will implement and benchmark the three parallelization phases, test predicted speedups against actual measurements, and analyze where efficiency is lost. The results will show how effective HPC techniques are for speeding up quantum chemistry calculations and provide insights for scaling VQE to larger molecules.}
+
+\subsection{Broader Impact}
+
+This work shows how classical HPC techniques can dramatically speed up hybrid quantum-classical algorithms. While we focus on the hydrogen molecule, the parallelization strategies work for many other problems:
+\begin{itemize}
+\item Larger molecules with more bond lengths or geometric parameters to explore
+\item Multi-dimensional potential energy surfaces
+\item VQE calculations with more complex ansatzes that need longer optimization times
+\item Other variational quantum algorithms (like QAOA)
+\end{itemize}
+
+As quantum computing hardware improves and hybrid algorithms become more prevalent, efficient parallelization will be essential for practical quantum chemistry applications.
+
+\section{Acknowledgements}
+
+We thank Dr. Khanal for guidance on parallelization strategies and access to computational resources in MA453 High Performance Computing. This work used the PennyLane quantum computing framework and relied on classical simulation of quantum circuits.
+
+\needsresults{[Add acknowledgements for HPC cluster access once parallel benchmarks are run]}
+
+\begin{thebibliography}{9}
+
+\bibitem{peruzzo2014}
+A. Peruzzo, et al.,
+\textit{A variational eigenvalue solver on a photonic quantum processor},
+Nature Communications \textbf{5}, 4213 (2014).
+
+\bibitem{pennylane}
+V. Bergholm, et al.,
+\textit{PennyLane: Automatic differentiation of hybrid quantum-classical computations},
+arXiv:1811.04968 (2018).
+
+\bibitem{mcardle2020}
+S. McArdle, S. Endo, A. Aspuru-Guzik, S. C. Benjamin, and X. Yuan,
+\textit{Quantum computational chemistry},
+Reviews of Modern Physics \textbf{92}, 015003 (2020).
+
+\bibitem{cerezo2021}
+M. Cerezo, et al.,
+\textit{Variational quantum algorithms},
+Nature Reviews Physics \textbf{3}, 625--644 (2021).
+
+\bibitem{szabo1996}
+A. Szabo and N. S. Ostlund,
+\textit{Modern Quantum Chemistry: Introduction to Advanced Electronic Structure Theory},
+Dover Publications (1996).
+
+\bibitem{amdahl1967}
+G. M. Amdahl,
+\textit{Validity of the single processor approach to achieving large scale computing capabilities},
+AFIPS Conference Proceedings \textbf{30}, 483--485 (1967).
+
+\end{thebibliography}
+
+\end{document}
