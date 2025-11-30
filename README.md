@@ -30,37 +30,105 @@ where $|\psi(\theta)\rangle$ is the quantum state prepared by our ansatz and $H$
 
 ## Setup
 
-The environment includes the following dependencies:
-- Python 3.12
-- PennyLane 0.43.1
-- JAX 0.6.2
-- NumPy, SciPy, Matplotlib
-- PennyLane Catalyst (for future optimization)
+### Environment Configurations
 
-**Install and activate environment:**
+This project provides multiple environment configurations for different use cases:
+
+1. **`environment.yml`** - Basic serial implementation (CPU only)
+2. **`vqe-mpi.yml`** - CPU-based MPI parallelization 
+3. **`vqe-gpu.yml`** - GPU-accelerated with CUDA support for HPC clusters
+
+### Local Setup (CPU)
+
+For local testing and development:
+
 ```bash
-# Create environment from environment.yml
+# Create environment for serial/basic testing
 conda env create -f environment.yml
-
-# Activate the environment
 conda activate quantumvqe
+
+# OR for MPI testing (requires OpenMPI)
+conda env create -f vqe-mpi.yml
+conda activate vqe-openmpi
 ```
+
+### HPC Cluster Setup (GPU)
+
+For running on GPU-enabled HPC clusters (e.g., vegaln1.erau.edu):
+
+```bash
+# SSH into cluster
+ssh malarchr@vegaln1.erau.edu
+
+# Clone repository or transfer code
+# git clone <repo-url> or scp -r local/path user@host:remote/path
+
+# Create GPU-enabled environment
+conda env create -f vqe-gpu.yml
+conda activate vqe-gpu
+
+# Verify GPU access
+python -c "import jax; print(f'GPUs available: {jax.devices()}')"
+```
+
+**Key Dependencies:**
+- Python 3.12
+- PennyLane 0.43.1 (quantum computing framework)
+- JAX 0.6.2 (with CUDA 11.8 support for GPU version)
+- PennyLane Catalyst 0.13.0 (JIT compilation)
+- Optax 0.2.6 (optimization)
+- OpenMPI + mpi4py (for distributed computing)
+- NumPy, SciPy, Matplotlib (scientific computing)
 
 ## Running the Code
 
-**Test run** (5 bond lengths, 50 iterations, ~2 seconds):
-```bash
-python src/test_main.py
-```
+### Local Execution
 
-**Full run** (40 bond lengths, 200 iterations, ~1 minute):
+**Serial implementation:**
 ```bash
+# Quick test (5 bond lengths, 50 iterations, ~2 seconds)
+python src/test_main.py
+
+# Full run (40 bond lengths, 200 iterations, ~1 minute)
 python src/main.py
 ```
 
-Results are saved as PNG images in `results/`:
-- `results/vqe_results.png` - Full potential energy surface
-- `results/test_vqe_results.png` - Test run results
+**JIT-compiled version** (requires Catalyst):
+```bash
+python src/vqe_qjit.py
+```
+
+**MPI parallel version** (requires OpenMPI):
+```bash
+# Run with 4 MPI processes
+mpirun -np 4 python src/vqe_mpi.py
+```
+
+### HPC Cluster Execution
+
+Submit jobs using PBS scheduler:
+
+```bash
+# Submit serial baseline job
+qsub pbs_scripts/run_serial.pbs
+
+# Submit GPU-accelerated job
+qsub pbs_scripts/run_gpu.pbs
+
+# Submit MPI parallel job (multiple nodes)
+qsub pbs_scripts/run_mpi.pbs
+
+# Check job status
+qstat -u $USER
+
+# View output logs
+cat output_*.log
+```
+
+**Results:** Output plots are saved in `results/` directory:
+- `vqe_results.png` - Serial potential energy surface
+- `vqe_results_optax.png` - JIT-compiled version
+- `vqe_results_mpi.png` - MPI parallel version
 
 ## Performance Baseline
 
@@ -79,12 +147,18 @@ Serial implementation performance metrics:
 ```
 QuantumVQE/
 ├── src/
-│   ├── main.py         # Full serial VQE implementation
-│   └── test_main.py    # Quick test version
-├── results/            # Output plots
-├── configs/            # Configuration files
-├── pbs_scripts/        # PBS job submission templates
-└── environment.yml     # Conda environment specification
+│   ├── main.py           # Serial VQE implementation (baseline)
+│   ├── test_main.py      # Quick test version
+│   ├── vqe_qjit.py       # JIT-compiled VQE with Catalyst
+│   ├── vqe_mpi.py        # MPI parallel VQE
+│   └── vqe_params.py     # Shared configuration parameters
+├── pbs_scripts/          # PBS job submission scripts
+├── configs/              # Configuration files
+├── results/              # Output plots and data
+├── deliverables/         # Project report and documentation
+├── environment.yml       # Basic CPU environment
+├── vqe-mpi.yml          # MPI-enabled CPU environment
+└── vqe-gpu.yml          # GPU-accelerated environment (HPC)
 ```
 
 ## Algorithm Overview
@@ -104,19 +178,39 @@ The VQE algorithm follows this structure:
 
 The outer loop over bond lengths is embarrassingly parallel - each bond length calculation is completely independent.
 
-## Future Work: HPC Optimization
+## HPC Optimization Strategies
 
-The current serial implementation will be optimized using:
+This project demonstrates multiple parallelization approaches:
 
-1. **JAX JIT compilation** - Just-in-time compilation of cost function
-2. **Multiprocessing** - Parallelize bond length calculations across CPU cores
-3. **Ray distributed computing** - Scale across HPC cluster nodes
-4. **PBS array jobs** - Distribute work across cluster using job scheduler
+### 1. JIT Compilation (Phase 1)
+- Uses PennyLane Catalyst + JAX for just-in-time compilation
+- Optimizes quantum circuit execution
+- Expected: 2-5x speedup over serial baseline
 
-Expected performance improvements:
-- JAX JIT: 2-5x speedup
-- Multiprocessing: 4-8x on multi-core systems
-- Cluster distribution: Linear scaling up to 40 nodes
+### 2. GPU Acceleration (Phase 1)
+- CUDA-enabled JAX on HPC GPU nodes
+- Leverages GPU tensor operations
+- Particularly effective for circuit simulations
+
+### 3. MPI Parallelism (Phase 2)
+- Distributes bond length calculations across multiple nodes
+- Uses mpi4py for process communication
+- Expected: Near-linear scaling up to 40 processes
+
+### 4. Shared-Memory Parallelism (Phase 3)
+- Python multiprocessing for single-node parallelization
+- Distributes work across CPU cores
+- Expected: 4-8x speedup on multi-core systems
+
+## Performance Comparison
+
+Target metrics to demonstrate HPC benefits:
+- **Baseline (Serial)**: 50.64s for 40 bond lengths
+- **JIT + GPU**: Target 2-5x speedup
+- **MPI (8 processes)**: Target 6-8x speedup
+- **MPI (16 processes)**: Target 10-15x speedup
+
+These results will be documented in the project report with speedup plots and efficiency analysis.
 
 ## License
 

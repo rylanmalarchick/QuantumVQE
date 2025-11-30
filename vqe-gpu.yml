@@ -1,0 +1,38 @@
+name: vqe-gpu
+channels:
+  - conda-forge
+  - nvidia
+  - defaults
+dependencies:
+  # --- 1. System Foundation ---
+  - python=3.12
+  - pip
+  
+  # --- 2. CUDA Support (from nvidia channel) ---
+  # Install CUDA toolkit from conda to ensure compatibility
+  - cudatoolkit=11.8
+  - cudnn=8.9
+  
+  # --- 3. MPI Support (for distributed computing) ---
+  - openmpi              # MPI runtime
+  - mpi4py               # Python MPI bindings
+  
+  # --- 4. Application Stack via Pip ---
+  - pip:
+      # Quantum computing framework
+      - pennylane==0.43.1
+      - pennylane-catalyst==0.13.0
+      
+      # JAX with CUDA support (installed via pip with cuda matching cudatoolkit)
+      # Using jax[cuda11_pip] notation for CUDA 11.x support
+      - jax[cuda11_pip]==0.6.2
+      
+      # JAX ecosystem
+      - ml-dtypes==0.5.4
+      - opt-einsum==3.4.0
+      - optax==0.2.6
+      
+      # Scientific computing
+      - scipy
+      - matplotlib
+      - numpy
