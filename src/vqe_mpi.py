@@ -14,6 +14,8 @@ import numpy as np
 from vqe_params import *
 
 # --- Configuration ---
+# Force jax to use cpu only
+jax.config.update("jax_platform_name", "cpu")
 jax.config.update("jax_enable_x64", True)
 
 
@@ -167,17 +169,23 @@ def main():
         #print(f"Circuit evaluations per second: {steps/total_time:.2f}")
         print("="*60)
         plt.figure(figsize=(10, 6))
-        plt.plot(final_bonds, final_energies, 'o-', linewidth=2, markersize=6, label="VQE (MPI)")
-        
-        
+        plt.plot(final_bonds, final_energies, 'o--', linewidth=1, markersize=3, label="VQE")
         
         plt.xlabel("Bond Length (Angstrom)", fontsize=12)
+        plt.ylabel("Ground State Energy (Hartree)", fontsize=12)
+        plt.title("H2 Potential Energy Surface", fontsize=14)
+        plt.grid(True, alpha=0.3)
+        plt.legend()
+        plt.savefig('vqe_results_mpi.png', dpi=150, bbox_inches='tight')
+        print("Plot saved as: vqe_results_mpi.png")
+        
+        '''plt.xlabel("Bond Length (Angstrom)", fontsize=12)
         plt.ylabel("Ground State Energy (Hartree)", fontsize=12)
         plt.title("H2 Potential Energy Surface (VQE + Optax + MPI)", fontsize=14)
         plt.grid(True, alpha=0.3)
         plt.legend()
         plt.savefig('vqe_results_mpi.png', dpi=150, bbox_inches='tight')
-        print("Plot saved as: vqe_results_mpi.png")
+        print("Plot saved as: vqe_results_mpi.png")'''
         
     
     

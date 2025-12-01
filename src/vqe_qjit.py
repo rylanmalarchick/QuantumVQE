@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 from vqe_params import *
 
 # --- Configuration ---
+# Force jax to use cpu only
+jax.config.update("jax_platform_name", "cpu")
 jax.config.update("jax_enable_x64", True)
 
 
