@@ -1,0 +1,135 @@
+============================================
+Serial Optax+JIT VQE Run (CPU-only)
+============================================
+Start time: Mon Dec  1 14:38:44 EST 2025
+Running on node: cn32
+Working directory: /home2/malarchr/project/QuantumVQE
+Python: /home2/malarchr/.conda/envs/vqe-gpu/bin/python
+============================================
+CUDA_VISIBLE_DEVICES: 
+JAX_PLATFORMS: cpu
+============================================
+JAX devices: [CpuDevice(id=0)]
+JAX default backend: cpu
+============================================================
+SERIAL OPTAX+JIT VQE (CPU-only, No MPI)
+============================================================
+This benchmark isolates optimizer+JIT effect from parallelization
+============================================================
+Building JIT-compiled VQE function...
+Bond lengths to scan: 100
+Max VQE iterations per bond length: 300
+============================================================
+Step 001/100: Bond=0.350 A | Energy=-0.789269 Ha | Time=5.623s | Iterations=110
+Step 002/100: Bond=0.377 A | Energy=-0.862235 Ha | Time=1.184s | Iterations=44
+Step 003/100: Bond=0.404 A | Energy=-0.921251 Ha | Time=1.285s | Iterations=87
+Step 004/100: Bond=0.430 A | Energy=-0.969093 Ha | Time=1.200s | Iterations=71
+Step 005/100: Bond=0.457 A | Energy=-1.007881 Ha | Time=1.431s | Iterations=85
+Step 006/100: Bond=0.484 A | Energy=-1.039254 Ha | Time=1.757s | Iterations=105
+Step 007/100: Bond=0.511 A | Energy=-1.064502 Ha | Time=1.492s | Iterations=100
+Step 008/100: Bond=0.537 A | Energy=-1.084651 Ha | Time=2.805s | Iterations=100
+Step 009/100: Bond=0.564 A | Energy=-1.100533 Ha | Time=1.479s | Iterations=74
+Step 010/100: Bond=0.591 A | Energy=-1.112825 Ha | Time=2.072s | Iterations=86
+Step 011/100: Bond=0.618 A | Energy=-1.122090 Ha | Time=1.808s | Iterations=79
+Step 012/100: Bond=0.644 A | Energy=-1.128796 Ha | Time=1.450s | Iterations=90
+Step 013/100: Bond=0.671 A | Energy=-1.133338 Ha | Time=1.163s | Iterations=98
+Step 014/100: Bond=0.698 A | Energy=-1.136051 Ha | Time=1.740s | Iterations=90
+Step 015/100: Bond=0.725 A | Energy=-1.137217 Ha | Time=1.459s | Iterations=74
+Step 016/100: Bond=0.752 A | Energy=-1.137078 Ha | Time=0.464s | Iterations=74
+Step 017/100: Bond=0.778 A | Energy=-1.135839 Ha | Time=1.062s | Iterations=93
+Step 018/100: Bond=0.805 A | Energy=-1.133676 Ha | Time=2.658s | Iterations=84
+Step 019/100: Bond=0.832 A | Energy=-1.130736 Ha | Time=2.349s | Iterations=64
+Step 020/100: Bond=0.859 A | Energy=-1.127147 Ha | Time=1.914s | Iterations=71
+Step 021/100: Bond=0.885 A | Energy=-1.123016 Ha | Time=0.697s | Iterations=66
+Step 022/100: Bond=0.912 A | Energy=-1.118436 Ha | Time=1.682s | Iterations=67
+Step 023/100: Bond=0.939 A | Energy=-1.113486 Ha | Time=0.952s | Iterations=44
+Step 024/100: Bond=0.966 A | Energy=-1.108235 Ha | Time=1.774s | Iterations=79
+Step 025/100: Bond=0.992 A | Energy=-1.102742 Ha | Time=1.624s | Iterations=78
+Step 026/100: Bond=1.019 A | Energy=-1.097057 Ha | Time=2.297s | Iterations=46
+Step 027/100: Bond=1.046 A | Energy=-1.091231 Ha | Time=0.950s | Iterations=49
+Step 028/100: Bond=1.073 A | Energy=-1.085302 Ha | Time=0.827s | Iterations=61
+Step 029/100: Bond=1.099 A | Energy=-1.079306 Ha | Time=0.702s | Iterations=84
+Step 030/100: Bond=1.126 A | Energy=-1.073278 Ha | Time=1.198s | Iterations=76
+Step 031/100: Bond=1.153 A | Energy=-1.067247 Ha | Time=0.918s | Iterations=43
+Step 032/100: Bond=1.180 A | Energy=-1.061240 Ha | Time=1.006s | Iterations=45
+Step 033/100: Bond=1.207 A | Energy=-1.055285 Ha | Time=1.365s | Iterations=69
+Step 034/100: Bond=1.233 A | Energy=-1.049401 Ha | Time=2.994s | Iterations=77
+Step 035/100: Bond=1.260 A | Energy=-1.043610 Ha | Time=0.724s | Iterations=62
+Step 036/100: Bond=1.287 A | Energy=-1.037928 Ha | Time=0.699s | Iterations=71
+Step 037/100: Bond=1.314 A | Energy=-1.032373 Ha | Time=1.452s | Iterations=78
+Step 038/100: Bond=1.340 A | Energy=-1.026959 Ha | Time=0.870s | Iterations=78
+Step 039/100: Bond=1.367 A | Energy=-1.021697 Ha | Time=1.674s | Iterations=78
+Step 040/100: Bond=1.394 A | Energy=-1.016599 Ha | Time=1.528s | Iterations=78
+Step 041/100: Bond=1.421 A | Energy=-1.011673 Ha | Time=0.630s | Iterations=71
+Step 042/100: Bond=1.447 A | Energy=-1.006925 Ha | Time=1.207s | Iterations=60
+Step 043/100: Bond=1.474 A | Energy=-1.002362 Ha | Time=1.504s | Iterations=78
+Step 044/100: Bond=1.501 A | Energy=-0.997966 Ha | Time=0.475s | Iterations=14
+Step 045/100: Bond=1.528 A | Energy=-0.993804 Ha | Time=1.575s | Iterations=74
+Step 046/100: Bond=1.555 A | Energy=-0.989812 Ha | Time=1.713s | Iterations=78
+Step 047/100: Bond=1.581 A | Energy=-0.986012 Ha | Time=1.518s | Iterations=62
+Step 048/100: Bond=1.608 A | Energy=-0.982403 Ha | Time=0.464s | Iterations=62
+Step 049/100: Bond=1.635 A | Energy=-0.978983 Ha | Time=1.496s | Iterations=62
+Step 050/100: Bond=1.662 A | Energy=-0.975745 Ha | Time=0.546s | Iterations=32
+Step 051/100: Bond=1.688 A | Energy=-0.972693 Ha | Time=0.542s | Iterations=33
+Step 052/100: Bond=1.715 A | Energy=-0.969821 Ha | Time=1.981s | Iterations=65
+Step 053/100: Bond=1.742 A | Energy=-0.967117 Ha | Time=1.876s | Iterations=60
+Step 054/100: Bond=1.769 A | Energy=-0.964581 Ha | Time=1.348s | Iterations=71
+Step 055/100: Bond=1.795 A | Energy=-0.962205 Ha | Time=1.674s | Iterations=78
+Step 056/100: Bond=1.822 A | Energy=-0.959983 Ha | Time=0.715s | Iterations=78
+Step 057/100: Bond=1.849 A | Energy=-0.957908 Ha | Time=0.610s | Iterations=71
+Step 058/100: Bond=1.876 A | Energy=-0.955975 Ha | Time=1.130s | Iterations=71
+Step 059/100: Bond=1.903 A | Energy=-0.954174 Ha | Time=2.321s | Iterations=60
+Step 060/100: Bond=1.929 A | Energy=-0.952501 Ha | Time=0.772s | Iterations=68
+Step 061/100: Bond=1.956 A | Energy=-0.950945 Ha | Time=0.743s | Iterations=32
+Step 062/100: Bond=1.983 A | Energy=-0.949508 Ha | Time=0.423s | Iterations=60
+Step 063/100: Bond=2.010 A | Energy=-0.948175 Ha | Time=1.356s | Iterations=65
+Step 064/100: Bond=2.036 A | Energy=-0.946942 Ha | Time=1.762s | Iterations=68
+Step 065/100: Bond=2.063 A | Energy=-0.945802 Ha | Time=1.838s | Iterations=73
+Step 066/100: Bond=2.090 A | Energy=-0.944750 Ha | Time=0.724s | Iterations=65
+Step 067/100: Bond=2.117 A | Energy=-0.943780 Ha | Time=1.540s | Iterations=78
+Step 068/100: Bond=2.143 A | Energy=-0.942886 Ha | Time=0.751s | Iterations=62
+Step 069/100: Bond=2.170 A | Energy=-0.942063 Ha | Time=1.463s | Iterations=71
+Step 070/100: Bond=2.197 A | Energy=-0.941306 Ha | Time=1.931s | Iterations=75
+Step 071/100: Bond=2.224 A | Energy=-0.940610 Ha | Time=1.684s | Iterations=78
+Step 072/100: Bond=2.251 A | Energy=-0.939970 Ha | Time=1.888s | Iterations=83
+Step 073/100: Bond=2.277 A | Energy=-0.939383 Ha | Time=2.193s | Iterations=79
+Step 074/100: Bond=2.304 A | Energy=-0.938844 Ha | Time=1.826s | Iterations=84
+Step 075/100: Bond=2.331 A | Energy=-0.938350 Ha | Time=0.871s | Iterations=76
+Step 076/100: Bond=2.358 A | Energy=-0.937897 Ha | Time=0.974s | Iterations=80
+Step 077/100: Bond=2.384 A | Energy=-0.937481 Ha | Time=1.065s | Iterations=89
+Step 078/100: Bond=2.411 A | Energy=-0.937101 Ha | Time=1.867s | Iterations=72
+Step 079/100: Bond=2.438 A | Energy=-0.936753 Ha | Time=2.561s | Iterations=86
+Step 080/100: Bond=2.465 A | Energy=-0.936432 Ha | Time=0.641s | Iterations=17
+Step 081/100: Bond=2.491 A | Energy=-0.936143 Ha | Time=2.104s | Iterations=72
+Step 082/100: Bond=2.518 A | Energy=-0.935877 Ha | Time=1.125s | Iterations=81
+Step 083/100: Bond=2.545 A | Energy=-0.935633 Ha | Time=0.758s | Iterations=52
+Step 084/100: Bond=2.572 A | Energy=-0.935410 Ha | Time=0.849s | Iterations=73
+Step 085/100: Bond=2.598 A | Energy=-0.935207 Ha | Time=1.660s | Iterations=57
+Step 086/100: Bond=2.625 A | Energy=-0.935021 Ha | Time=2.025s | Iterations=64
+Step 087/100: Bond=2.652 A | Energy=-0.934852 Ha | Time=1.309s | Iterations=65
+Step 088/100: Bond=2.679 A | Energy=-0.934697 Ha | Time=0.962s | Iterations=71
+Step 089/100: Bond=2.706 A | Energy=-0.934556 Ha | Time=1.508s | Iterations=79
+Step 090/100: Bond=2.732 A | Energy=-0.934428 Ha | Time=1.206s | Iterations=75
+Step 091/100: Bond=2.759 A | Energy=-0.934310 Ha | Time=2.625s | Iterations=80
+Step 092/100: Bond=2.786 A | Energy=-0.934204 Ha | Time=1.032s | Iterations=58
+Step 093/100: Bond=2.813 A | Energy=-0.934106 Ha | Time=0.680s | Iterations=70
+Step 094/100: Bond=2.839 A | Energy=-0.934017 Ha | Time=1.094s | Iterations=52
+Step 095/100: Bond=2.866 A | Energy=-0.933937 Ha | Time=2.264s | Iterations=83
+Step 096/100: Bond=2.893 A | Energy=-0.933864 Ha | Time=0.913s | Iterations=85
+Step 097/100: Bond=2.920 A | Energy=-0.933797 Ha | Time=3.109s | Iterations=77
+Step 098/100: Bond=2.946 A | Energy=-0.933737 Ha | Time=2.114s | Iterations=75
+Step 099/100: Bond=2.973 A | Energy=-0.933682 Ha | Time=0.753s | Iterations=54
+Step 100/100: Bond=3.000 A | Energy=-0.933631 Ha | Time=1.110s | Iterations=61
+
+============================================================
+PERFORMANCE METRICS - SERIAL OPTAX+JIT (CPU-only)
+============================================================
+Total runtime: 143.80 seconds (2.40 minutes)
+Avg time per bond length: 1.44 seconds
+Total VQE iterations: 7033
+Avg time per VQE iteration: 0.0204 seconds
+============================================================
+Plot saved as: vqe_results_serial_optax.png
+============================================
+End time: Mon Dec  1 14:41:26 EST 2025
+============================================

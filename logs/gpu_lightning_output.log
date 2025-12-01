@@ -1,0 +1,180 @@
+============================================
+TRUE GPU VQE Run (lightning.gpu)
+============================================
+Start time: Mon Dec  1 14:42:19 EST 2025
+Running on node: gpu01
+Working directory: /home2/malarchr/project/QuantumVQE
+Python: /home2/malarchr/.conda/envs/vqe-gpu/bin/python
+============================================
+GPU Info:
+name, memory.total [MiB], driver_version
+NVIDIA H100 PCIe, 81559 MiB, 535.129.03
+NVIDIA H100 PCIe, 81559 MiB, 535.129.03
+NVIDIA H100 PCIe, 81559 MiB, 535.129.03
+NVIDIA H100 PCIe, 81559 MiB, 535.129.03
+Mon Dec  1 14:42:19 2025       
++---------------------------------------------------------------------------------------+
+| NVIDIA-SMI 535.129.03             Driver Version: 535.129.03   CUDA Version: 12.2     |
+|-----------------------------------------+----------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
+|                                         |                      |               MIG M. |
+|=========================================+======================+======================|
+|   0  NVIDIA H100 PCIe               On  | 00000000:02:00.0 Off |                    0 |
+| N/A   45C    P0              83W / 350W |    759MiB / 81559MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+|   1  NVIDIA H100 PCIe               On  | 00000000:64:00.0 Off |                    0 |
+| N/A   44C    P0              81W / 350W |   4027MiB / 81559MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+|   2  NVIDIA H100 PCIe               On  | 00000000:82:00.0 Off |                    0 |
+| N/A   44C    P0              79W / 350W |  20351MiB / 81559MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+|   3  NVIDIA H100 PCIe               On  | 00000000:E3:00.0 Off |                    0 |
+| N/A   35C    P0              48W / 350W |      7MiB / 81559MiB |      0%      Default |
+|                                         |                      |             Disabled |
++-----------------------------------------+----------------------+----------------------+
+                                                                                         
++---------------------------------------------------------------------------------------+
+| Processes:                                                                            |
+|  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+|        ID   ID                                                             Usage      |
+|=======================================================================================|
+|    0   N/A  N/A     10681      C   .../xings/.local/bin/ollama/bin/ollama      746MiB |
+|    1   N/A  N/A     16292      C   .../xings/.local/bin/ollama/bin/ollama     4014MiB |
+|    2   N/A  N/A    630489      C   .../xings/.local/bin/ollama/bin/ollama    20338MiB |
++---------------------------------------------------------------------------------------+
+============================================
+JAX devices: [CpuDevice(id=0)]
+Default backend: cpu
+============================================
+Running vqe_gpu.py (lightning.gpu)
+============================================
+JAX devices: [CpuDevice(id=0)]
+JAX default backend: cpu
+Warning: lightning.gpu not available (Device lightning.gpu does not exist. Make sure the required plugin is installed.)
+Falling back to lightning.qubit (CPU)
+============================================================
+GPU-ACCELERATED VQE (lightning.gpu + Optax + JIT)
+============================================================
+This benchmark measures true GPU acceleration
+============================================================
+Building JIT-compiled VQE function...
+Bond lengths to scan: 100
+Max VQE iterations per bond length: 300
+============================================================
+Step 001/100: Bond=0.350 A | Energy=-0.789269 Ha | Time=3.672s | Iterations=110
+Step 002/100: Bond=0.377 A | Energy=-0.862235 Ha | Time=1.780s | Iterations=44
+Step 003/100: Bond=0.404 A | Energy=-0.921251 Ha | Time=2.857s | Iterations=87
+Step 004/100: Bond=0.430 A | Energy=-0.969093 Ha | Time=3.343s | Iterations=71
+Step 005/100: Bond=0.457 A | Energy=-1.007881 Ha | Time=1.545s | Iterations=85
+Step 006/100: Bond=0.484 A | Energy=-1.039254 Ha | Time=2.482s | Iterations=105
+Step 007/100: Bond=0.511 A | Energy=-1.064502 Ha | Time=2.505s | Iterations=100
+Step 008/100: Bond=0.537 A | Energy=-1.084651 Ha | Time=3.916s | Iterations=100
+Step 009/100: Bond=0.564 A | Energy=-1.100533 Ha | Time=1.579s | Iterations=74
+Step 010/100: Bond=0.591 A | Energy=-1.112825 Ha | Time=1.695s | Iterations=86
+Step 011/100: Bond=0.618 A | Energy=-1.122090 Ha | Time=0.515s | Iterations=79
+Step 012/100: Bond=0.644 A | Energy=-1.128796 Ha | Time=1.524s | Iterations=90
+Step 013/100: Bond=0.671 A | Energy=-1.133338 Ha | Time=2.767s | Iterations=98
+Step 014/100: Bond=0.698 A | Energy=-1.136051 Ha | Time=2.042s | Iterations=90
+Step 015/100: Bond=0.725 A | Energy=-1.137217 Ha | Time=2.155s | Iterations=74
+Step 016/100: Bond=0.752 A | Energy=-1.137078 Ha | Time=1.506s | Iterations=74
+Step 017/100: Bond=0.778 A | Energy=-1.135839 Ha | Time=3.497s | Iterations=93
+Step 018/100: Bond=0.805 A | Energy=-1.133676 Ha | Time=2.311s | Iterations=84
+Step 019/100: Bond=0.832 A | Energy=-1.130736 Ha | Time=0.691s | Iterations=64
+Step 020/100: Bond=0.859 A | Energy=-1.127147 Ha | Time=1.982s | Iterations=71
+Step 021/100: Bond=0.885 A | Energy=-1.123016 Ha | Time=1.568s | Iterations=66
+Step 022/100: Bond=0.912 A | Energy=-1.118436 Ha | Time=1.693s | Iterations=67
+Step 023/100: Bond=0.939 A | Energy=-1.113486 Ha | Time=0.917s | Iterations=44
+Step 024/100: Bond=0.966 A | Energy=-1.108235 Ha | Time=3.138s | Iterations=79
+Step 025/100: Bond=0.992 A | Energy=-1.102742 Ha | Time=0.723s | Iterations=78
+Step 026/100: Bond=1.019 A | Energy=-1.097057 Ha | Time=0.747s | Iterations=46
+Step 027/100: Bond=1.046 A | Energy=-1.091231 Ha | Time=0.941s | Iterations=49
+Step 028/100: Bond=1.073 A | Energy=-1.085302 Ha | Time=1.486s | Iterations=61
+Step 029/100: Bond=1.099 A | Energy=-1.079306 Ha | Time=2.124s | Iterations=84
+Step 030/100: Bond=1.126 A | Energy=-1.073278 Ha | Time=3.943s | Iterations=76
+Step 031/100: Bond=1.153 A | Energy=-1.067247 Ha | Time=2.542s | Iterations=43
+Step 032/100: Bond=1.180 A | Energy=-1.061240 Ha | Time=1.328s | Iterations=45
+Step 033/100: Bond=1.207 A | Energy=-1.055285 Ha | Time=1.255s | Iterations=69
+Step 034/100: Bond=1.233 A | Energy=-1.049401 Ha | Time=3.329s | Iterations=77
+Step 035/100: Bond=1.260 A | Energy=-1.043610 Ha | Time=0.586s | Iterations=62
+Step 036/100: Bond=1.287 A | Energy=-1.037928 Ha | Time=1.355s | Iterations=71
+Step 037/100: Bond=1.314 A | Energy=-1.032373 Ha | Time=1.128s | Iterations=78
+Step 038/100: Bond=1.340 A | Energy=-1.026959 Ha | Time=2.399s | Iterations=78
+Step 039/100: Bond=1.367 A | Energy=-1.021697 Ha | Time=2.106s | Iterations=78
+Step 040/100: Bond=1.394 A | Energy=-1.016599 Ha | Time=2.274s | Iterations=78
+Step 041/100: Bond=1.421 A | Energy=-1.011673 Ha | Time=1.461s | Iterations=71
+Step 042/100: Bond=1.447 A | Energy=-1.006925 Ha | Time=1.075s | Iterations=60
+Step 043/100: Bond=1.474 A | Energy=-1.002362 Ha | Time=1.857s | Iterations=78
+Step 044/100: Bond=1.501 A | Energy=-0.997966 Ha | Time=0.374s | Iterations=14
+Step 045/100: Bond=1.528 A | Energy=-0.993804 Ha | Time=1.574s | Iterations=74
+Step 046/100: Bond=1.555 A | Energy=-0.989812 Ha | Time=2.229s | Iterations=78
+Step 047/100: Bond=1.581 A | Energy=-0.986012 Ha | Time=1.894s | Iterations=62
+Step 048/100: Bond=1.608 A | Energy=-0.982403 Ha | Time=1.370s | Iterations=62
+Step 049/100: Bond=1.635 A | Energy=-0.978983 Ha | Time=1.478s | Iterations=62
+Step 050/100: Bond=1.662 A | Energy=-0.975745 Ha | Time=0.704s | Iterations=32
+Step 051/100: Bond=1.688 A | Energy=-0.972693 Ha | Time=0.501s | Iterations=33
+Step 052/100: Bond=1.715 A | Energy=-0.969821 Ha | Time=1.688s | Iterations=65
+Step 053/100: Bond=1.742 A | Energy=-0.967117 Ha | Time=1.216s | Iterations=60
+Step 054/100: Bond=1.769 A | Energy=-0.964581 Ha | Time=1.153s | Iterations=71
+Step 055/100: Bond=1.795 A | Energy=-0.962205 Ha | Time=2.859s | Iterations=78
+Step 056/100: Bond=1.822 A | Energy=-0.959983 Ha | Time=2.369s | Iterations=78
+Step 057/100: Bond=1.849 A | Energy=-0.957908 Ha | Time=2.209s | Iterations=71
+Step 058/100: Bond=1.876 A | Energy=-0.955975 Ha | Time=1.665s | Iterations=71
+Step 059/100: Bond=1.903 A | Energy=-0.954174 Ha | Time=0.408s | Iterations=60
+Step 060/100: Bond=1.929 A | Energy=-0.952501 Ha | Time=0.254s | Iterations=68
+Step 061/100: Bond=1.956 A | Energy=-0.950945 Ha | Time=0.154s | Iterations=32
+Step 062/100: Bond=1.983 A | Energy=-0.949508 Ha | Time=1.459s | Iterations=60
+Step 063/100: Bond=2.010 A | Energy=-0.948175 Ha | Time=1.060s | Iterations=65
+Step 064/100: Bond=2.036 A | Energy=-0.946942 Ha | Time=1.411s | Iterations=68
+Step 065/100: Bond=2.063 A | Energy=-0.945802 Ha | Time=1.192s | Iterations=73
+Step 066/100: Bond=2.090 A | Energy=-0.944750 Ha | Time=1.756s | Iterations=65
+Step 067/100: Bond=2.117 A | Energy=-0.943780 Ha | Time=1.567s | Iterations=78
+Step 068/100: Bond=2.143 A | Energy=-0.942886 Ha | Time=0.800s | Iterations=62
+Step 069/100: Bond=2.170 A | Energy=-0.942063 Ha | Time=1.684s | Iterations=71
+Step 070/100: Bond=2.197 A | Energy=-0.941306 Ha | Time=0.959s | Iterations=75
+Step 071/100: Bond=2.224 A | Energy=-0.940610 Ha | Time=2.126s | Iterations=78
+Step 072/100: Bond=2.251 A | Energy=-0.939970 Ha | Time=1.083s | Iterations=83
+Step 073/100: Bond=2.277 A | Energy=-0.939383 Ha | Time=3.346s | Iterations=79
+Step 074/100: Bond=2.304 A | Energy=-0.938844 Ha | Time=1.662s | Iterations=84
+Step 075/100: Bond=2.331 A | Energy=-0.938350 Ha | Time=1.564s | Iterations=76
+Step 076/100: Bond=2.358 A | Energy=-0.937897 Ha | Time=1.895s | Iterations=80
+Step 077/100: Bond=2.384 A | Energy=-0.937481 Ha | Time=2.743s | Iterations=89
+Step 078/100: Bond=2.411 A | Energy=-0.937101 Ha | Time=2.362s | Iterations=72
+Step 079/100: Bond=2.438 A | Energy=-0.936753 Ha | Time=1.079s | Iterations=86
+Step 080/100: Bond=2.465 A | Energy=-0.936432 Ha | Time=0.987s | Iterations=17
+Step 081/100: Bond=2.491 A | Energy=-0.936143 Ha | Time=2.694s | Iterations=72
+Step 082/100: Bond=2.518 A | Energy=-0.935877 Ha | Time=2.190s | Iterations=81
+Step 083/100: Bond=2.545 A | Energy=-0.935633 Ha | Time=1.688s | Iterations=52
+Step 084/100: Bond=2.572 A | Energy=-0.935410 Ha | Time=1.860s | Iterations=73
+Step 085/100: Bond=2.598 A | Energy=-0.935207 Ha | Time=1.891s | Iterations=57
+Step 086/100: Bond=2.625 A | Energy=-0.935021 Ha | Time=0.751s | Iterations=64
+Step 087/100: Bond=2.652 A | Energy=-0.934852 Ha | Time=1.045s | Iterations=65
+Step 088/100: Bond=2.679 A | Energy=-0.934697 Ha | Time=1.540s | Iterations=71
+Step 089/100: Bond=2.706 A | Energy=-0.934556 Ha | Time=2.460s | Iterations=79
+Step 090/100: Bond=2.732 A | Energy=-0.934428 Ha | Time=1.092s | Iterations=75
+Step 091/100: Bond=2.759 A | Energy=-0.934310 Ha | Time=1.351s | Iterations=80
+Step 092/100: Bond=2.786 A | Energy=-0.934204 Ha | Time=0.448s | Iterations=58
+Step 093/100: Bond=2.813 A | Energy=-0.934106 Ha | Time=1.925s | Iterations=70
+Step 094/100: Bond=2.839 A | Energy=-0.934017 Ha | Time=1.057s | Iterations=52
+Step 095/100: Bond=2.866 A | Energy=-0.933937 Ha | Time=3.594s | Iterations=83
+Step 096/100: Bond=2.893 A | Energy=-0.933864 Ha | Time=3.258s | Iterations=85
+Step 097/100: Bond=2.920 A | Energy=-0.933797 Ha | Time=1.882s | Iterations=77
+Step 098/100: Bond=2.946 A | Energy=-0.933737 Ha | Time=2.000s | Iterations=75
+Step 099/100: Bond=2.973 A | Energy=-0.933682 Ha | Time=0.719s | Iterations=54
+Step 100/100: Bond=3.000 A | Energy=-0.933631 Ha | Time=1.256s | Iterations=61
+
+============================================================
+PERFORMANCE METRICS - GPU (lightning.gpu + Optax + JIT)
+============================================================
+Total runtime: 173.94 seconds (2.90 minutes)
+Avg time per bond length: 1.74 seconds
+Total VQE iterations: 7033
+Avg time per VQE iteration: 0.0247 seconds
+============================================================
+Plot saved as: vqe_results_gpu.png
+============================================
+End time: Mon Dec  1 14:45:26 EST 2025
+============================================
