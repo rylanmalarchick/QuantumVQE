@@ -1,66 +1,122 @@
-VQE BENCHMARK PERMUTATIONS - MISSING TESTS
+VQE BENCHMARK PERMUTATIONS - COMPLETE TEST MATRIX
 ============================================================
 
-GOAL: Separate optimizer effects from parallelization effects
+GOAL: Separate optimizer, JIT, device, and parallelization effects
 
-CURRENT BENCHMARKS (COMPLETED):
+============================================================
+COMPLETE BENCHMARK MATRIX
+============================================================
+
+| # | Script                  | Source File          | Optimizer | JIT | Device         | Parallel | Status    |
+|---|-------------------------|----------------------|-----------|-----|----------------|----------|-----------|
+| 1 | run_serial.sh           | main.py              | PennyLane | No  | lightning.qubit| None     | DONE 593.95s |
+| 2 | run_serial_optax.sh     | vqe_serial_optax.py  | Optax     | Yes | lightning.qubit| None     | NEW - RUN |
+| 3 | run_gpu.sh              | vqe_qjit.py          | Optax     | Yes | lightning.qubit| None     | DONE 171.79s (mislabeled as "GPU") |
+| 4 | run_gpu_lightning.sh    | vqe_gpu.py           | Optax     | Yes | lightning.gpu  | None     | NEW - RUN |
+| 5 | run_mpi_N.sh            | vqe_mpi.py           | Optax     | Yes | lightning.qubit| MPI-N    | DONE 5-8s |
+
+============================================================
+CLARIFICATION: WHAT WE ACTUALLY BENCHMARKED
+============================================================
+
+The "GPU/JIT" result (171.79s) was MISLABELED. Looking at the code:
+- vqe_qjit.py line 13: jax.config.update("jax_platform_name", "cpu") 
+- vqe_qjit.py line 18: qml.device("lightning.qubit", ...) 
+
+This means the 171.79s benchmark was actually:
+  CPU + JIT + Optax + lightning.qubit (NOT GPU)
+
+============================================================
+BENCHMARKS TO RUN (PRIORITY ORDER)
+============================================================
+
+HIGH PRIORITY - Required for accurate analysis:
 ------------------------------------------------------------
- Serial PennyLane Adam (no JIT)     : 593.95s (main.py)
- GPU Optax+JIT (single thread)      : 171.79s (vqe_qjit.py on GPU)
- MPI-2 Optax+JIT                    : 8.45s   (vqe_mpi.py)
- MPI-4 Optax+JIT                    : 6.07s   (vqe_mpi.py)
- MPI-8 Optax+JIT                    : 5.48s   (vqe_mpi.py)
- MPI-16 Optax+JIT                   : 5.06s   (vqe_mpi.py)
- MPI-32 Optax+JIT                   : 5.04s   (vqe_mpi.py)
 
-MISSING BENCHMARKS (NEEDED):
-------------------------------------------------------------
- Serial Optax+JIT (CPU-only, no GPU, no MPI)
-   - File: Need to create src/vqe_serial_optax.py
-   - PBS: Need to create pbs_scripts/run_serial_optax.sh
-   - Purpose: Isolates optimizer+JIT effect without GPU or parallelization
-   - Expected: ~200-300s (between 593.95s and 171.79s)
+1. Serial Optax+JIT (CPU, lightning.qubit) - NEW
+   Script: qsub pbs_scripts/run_serial_optax.sh
+   Source: src/vqe_serial_optax.py
+   Purpose: Isolates Optax+JIT effect from parallelization
+   Expected: Should be ~171.79s (same as vqe_qjit.py since both are CPU+JIT)
+   
+2. TRUE GPU (lightning.gpu) - NEW  
+   Script: qsub pbs_scripts/run_gpu_lightning.sh
+   Source: src/vqe_gpu.py
+   Purpose: Measures actual GPU acceleration
+   Expected: Faster than CPU+JIT (maybe 50-100s?)
+   Requires: PennyLane-Lightning-GPU package installed
 
-OPTIONAL BENCHMARKS (for completeness):
-------------------------------------------------------------
- MPI-2 PennyLane Adam (no JIT)
-   - Purpose: Measures pure parallelization effect with PennyLane
-   - Expected: ~297s (2× speedup from serial 593.95s)
-  
- MPI-4 PennyLane Adam (no JIT)
-   - Expected: ~148s (4× speedup)
+============================================================
+CORRECTED ANALYSIS BREAKDOWN
+============================================================
 
- MPI-8 PennyLane Adam (no JIT)
-   - Expected: ~74s (8× speedup)
+Once we have all benchmarks, we can calculate:
 
-ANALYSIS BREAKDOWN:
-------------------------------------------------------------
-Once Serial Optax+JIT (CPU) is measured, we can calculate:
+1. OPTIMIZER + JIT EFFECT (PennyLane → Optax+JIT, same device):
+   Speedup = Serial_PennyLane (593.95s) / Serial_Optax+JIT (???s)
+   Compare: main.py vs vqe_serial_optax.py
+   Expected: ~3-4x
 
-1. OPTIMIZER EFFECT (PennyLane → Optax with JIT):
-   Speedup = Serial_PennyLane / Serial_Optax_CPU
-   Expected: ~2-3×
+2. GPU DEVICE EFFECT (CPU → GPU, same optimizer+JIT):
+   Speedup = Serial_Optax+JIT_CPU (???s) / GPU_Optax+JIT (???s)  
+   Compare: vqe_serial_optax.py vs vqe_gpu.py
+   Expected: ~1.5-3x for small circuits (may be minimal for 4 qubits)
 
-2. GPU ACCELERATION EFFECT:
-   Speedup = Serial_Optax_CPU / GPU_Optax
-   Expected: ~1.5-2×
-
-3. MPI PARALLELIZATION EFFECT:
-   Speedup = Serial_Optax_CPU / MPI-N_Optax
-   N=2:  ~25-35×
-   N=32: ~40-60×
+3. MPI PARALLELIZATION EFFECT (1 process → N processes):
+   Speedup = Serial_Optax+JIT_CPU (???s) / MPI-N (5-8s)
+   Compare: vqe_serial_optax.py vs vqe_mpi.py
+   Expected: Near-linear scaling
 
 4. COMBINED EFFECT:
-   Speedup = Serial_PennyLane / MPI-32_Optax = 117.85× (measured)
+   Speedup = Serial_PennyLane (593.95s) / MPI-32 (5.04s) = 117.85x
+   This combines ALL optimizations
 
-PRIORITY:
-------------------------------------------------------------
-HIGH PRIORITY: Serial Optax+JIT (CPU-only) - Required for report
-LOW PRIORITY:  MPI PennyLane variants - Nice to have but not critical
+============================================================
+FILE INVENTORY
+============================================================
 
-NEXT STEPS:
-------------------------------------------------------------
-1. Create src/vqe_serial_optax.py (copy vqe_qjit.py, ensure CPU-only)
-2. Create pbs_scripts/run_serial_optax.sh (nodes=1:ppn=1, no GPU request)
-3. Run benchmark on HPC
-4. Update analysis scripts and report with three-factor breakdown
+Source Files (src/):
+  - main.py              : Serial PennyLane Adam, no JIT, lightning.qubit
+  - vqe_serial_optax.py  : Serial Optax+JIT, lightning.qubit (NEW)
+  - vqe_qjit.py          : Optax+JIT, lightning.qubit (was mislabeled as GPU)
+  - vqe_gpu.py           : Optax+JIT, lightning.gpu (NEW - true GPU)
+  - vqe_mpi.py           : MPI parallel, Optax+JIT, lightning.qubit
+
+PBS Scripts (pbs_scripts/):
+  - run_serial.sh        : Runs main.py
+  - run_serial_optax.sh  : Runs vqe_serial_optax.py (NEW)
+  - run_gpu.sh           : Runs vqe_qjit.py (keep for reproducibility)
+  - run_gpu_lightning.sh : Runs vqe_gpu.py (NEW - true GPU)
+  - run_mpi_template.sh  : Template for MPI jobs
+  - generate_mpi_scripts.sh : Generates MPI job scripts
+
+============================================================
+CLUSTER RUN COMMANDS
+============================================================
+
+# 1. Pull latest code
+cd ~/QuantumVQE
+git pull
+
+# 2. Create logs directory
+mkdir -p logs
+
+# 3. Run NEW benchmarks (high priority)
+qsub pbs_scripts/run_serial_optax.sh      # Serial Optax+JIT CPU
+qsub pbs_scripts/run_gpu_lightning.sh     # TRUE GPU benchmark
+
+# 4. Check results
+cat logs/serial_optax_output.log
+cat logs/gpu_lightning_output.log
+
+============================================================
+NOTES
+============================================================
+
+- The vqe_qjit.py (171.79s) result is still VALID - it's CPU+JIT+Optax
+- We're NOT deleting/changing any existing files
+- vqe_serial_optax.py and vqe_qjit.py should give similar results
+  (both are CPU+JIT+Optax+lightning.qubit)
+- The difference is vqe_serial_optax.py EXPLICITLY forces CPU
+- vqe_gpu.py uses lightning.gpu for actual GPU acceleration
+- For 4 qubits, GPU speedup may be minimal (GPU shines for >10 qubits)
