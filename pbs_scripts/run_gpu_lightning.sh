@@ -18,8 +18,10 @@
 cd $PBS_O_WORKDIR
 
 # Activate conda environment
+# NOTE: Uses vqe-lightning-gpu environment (separate from vqe-gpu)
+# This environment has pennylane-lightning-gpu but NO Catalyst
 eval "$(/apps/spack/opt/spack/linux-rocky8-zen4/gcc-13.2.0/anaconda3-2023.09-0-3wl2qheo6tntdwtbjdmvouw24zd4rugj/bin/conda shell.bash hook)"
-conda activate vqe-gpu
+conda activate vqe-lightning-gpu
 
 echo "============================================"
 echo "TRUE GPU VQE Run (lightning.gpu)"

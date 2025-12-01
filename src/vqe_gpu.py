@@ -1,141 +1,115 @@
 """
-GPU-Accelerated VQE Implementation (lightning.gpu + Optax + JIT)
+GPU-Accelerated VQE Implementation (lightning.gpu + Optax)
 
 This script uses PennyLane's lightning.gpu device for true GPU acceleration.
 Used to benchmark actual GPU speedup over CPU implementations.
 
 Key differences from other implementations:
-- vs main.py: Uses Optax optimizer + JIT + GPU device
+- vs main.py: Uses Optax optimizer + lightning.gpu device (not PennyLane Adam)
 - vs vqe_serial_optax.py: Uses lightning.gpu instead of lightning.qubit
-- vs vqe_qjit.py: Uses lightning.gpu and allows JAX GPU backend
+- vs vqe_qjit.py: Uses lightning.gpu, NO Catalyst JIT (different acceleration path)
 - vs vqe_mpi.py: Single GPU, no MPI parallelization
 
 Requirements:
-- PennyLane-Lightning-GPU package
+- PennyLane-Lightning-GPU package (pennylane-lightning-gpu)
 - CUDA-compatible GPU
-- cuQuantum SDK (optional, for additional speedup)
+- Environment: vqe-lightning-gpu (see vqe-lightning-gpu.yml)
+
+Note: This script does NOT use Catalyst JIT compilation.
+GPU acceleration comes from the lightning.gpu device backend.
 """
 
 import time
 import pennylane as qml
 from pennylane import qchem
-from jax import numpy as jnp
-import jax
-import catalyst
+from pennylane import numpy as np
 import optax
 import matplotlib
 matplotlib.use('Agg')  # Non-interactive backend for cluster
 import matplotlib.pyplot as plt
 from vqe_params import *
 
-# --- Configuration ---
-# Allow JAX to use GPU if available
-# Do NOT force CPU - let it auto-detect GPU
-jax.config.update("jax_enable_x64", True)
-
-# Print device info
-print(f"JAX devices: {jax.devices()}")
-print(f"JAX default backend: {jax.default_backend()}")
-
+# --- Device Setup ---
 # Use lightning.gpu for GPU-accelerated quantum simulation
 # Falls back to lightning.qubit if GPU not available
 try:
     dev = qml.device("lightning.gpu", wires=QUBITS)
-    print(f"Using device: lightning.gpu (GPU-accelerated)")
+    DEVICE_NAME = "lightning.gpu"
+    print(f"SUCCESS: Using device: lightning.gpu (GPU-accelerated)")
 except Exception as e:
     print(f"Warning: lightning.gpu not available ({e})")
     print("Falling back to lightning.qubit (CPU)")
     dev = qml.device("lightning.qubit", wires=QUBITS)
+    DEVICE_NAME = "lightning.qubit"
+
+# --- Molecular Setup ---
+# Get static molecular data (doesn't change with bond length)
+hf_state = qchem.hf_state(ELECTRONS, QUBITS)
+singles, doubles = qchem.excitations(ELECTRONS, QUBITS)
+n_params = len(singles) + len(doubles)
+
+# Define the ansatz function
+def ansatz(params):
+    """The quantum circuit template (ansatz)."""
+    qml.BasisState(hf_state, wires=range(QUBITS))
+    qml.DoubleExcitation(params[0], wires=range(QUBITS))
+
+# Global Hamiltonian (will be set per bond length)
+H = None
+
+@qml.qnode(dev)
+def cost_fn(params):
+    """Cost function: expectation value of Hamiltonian."""
+    ansatz(params)
+    return qml.expval(H)
 
 
-def get_h2_hamiltonian(bond_length):
-    """Generate the H2 molecular Hamiltonian for a given bond length."""
-    coordinates = jnp.array([[0.0, 0.0, -bond_length / 2], 
-                             [0.0, 0.0, bond_length / 2]])
-    molecule = qchem.Molecule(SYMBOLS, coordinates, unit=UNIT)
-    H_obj, _ = qchem.molecular_hamiltonian(molecule, method=METHOD)
-    return H_obj
-
-
-def get_static_molecular_data():
-    """Get static molecular data that doesn't change with bond length."""
-    H_obj = get_h2_hamiltonian(bond_length=DUMMY_BOND_LENGTH)
-    _, static_ops = H_obj.terms()
+def run_vqe_optax(params_init, max_steps=MAX_STEPS, tol=1e-8):
+    """
+    Run VQE optimization using Optax Adam optimizer.
     
-    hf_state = qchem.hf_state(ELECTRONS, QUBITS)
-    singles, doubles = qchem.excitations(ELECTRONS, QUBITS)
-    doubles_wires = doubles[0]
+    This is a standard optimization loop (no JIT compilation).
+    GPU acceleration comes from the lightning.gpu device.
+    """
+    optimizer = optax.adam(learning_rate=STEP_SIZE)
+    params = np.array(params_init, requires_grad=True)
+    opt_state = optimizer.init(params)
     
-    return static_ops, hf_state, doubles_wires, len(singles) + len(doubles)
-
-
-def build_vqe_runner(static_ops, hf_state, doubles_wires, tol=1e-8):
-    """Build the JIT-compiled VQE optimization function."""
+    prev_energy = float('inf')
     
-    @qml.qnode(dev)
-    def circuit(params, coeffs):
-        H = qml.Hamiltonian(coeffs, static_ops)
-        qml.BasisState(hf_state, wires=range(QUBITS))
-        qml.DoubleExcitation(params[0], wires=doubles_wires)
-        return qml.expval(H)
-
-    @catalyst.qjit
-    def optimize_step(params, coeffs):
-        optimizer = optax.adam(learning_rate=STEP_SIZE)
-        opt_state = optimizer.init(params)
-
-        def cost_fn(p): return circuit(p, coeffs)
-        grad_fn = catalyst.grad(cost_fn)
-
-        # Initial Energy Calculation
-        init_energy = cost_fn(params)
+    for step in range(max_steps):
+        # Compute gradient using PennyLane autodiff
+        grad_fn = qml.grad(cost_fn)
+        grads = grad_fn(params)
         
-        # State: (params, opt_state, current_energy, prev_energy, step_count)
-        init_carry = (params, opt_state, init_energy, init_energy + 100.0, 0)
-
-        def cond_fn(carry):
-            _, _, curr_E, prev_E, step = carry
-            not_max_steps = step < MAX_STEPS
-            not_converged = jnp.abs(curr_E - prev_E) > tol
-            return jnp.logical_and(not_max_steps, not_converged)
-
-        def body_fn(carry):
-            curr_params, curr_opt_state, curr_E, _, step = carry
-            
-            grads = grad_fn(curr_params)
-            updates, new_opt_state = optimizer.update(grads, curr_opt_state, curr_params)
-            new_params = optax.apply_updates(curr_params, updates)
-            
-            new_energy = cost_fn(new_params)
-            
-            return (new_params, new_opt_state, new_energy, curr_E, step + 1)
-
-        final_carry = catalyst.while_loop(cond_fn)(body_fn)(init_carry)
-
-        final_params, _, final_energy, _, steps_taken = final_carry
+        # Optax update
+        updates, opt_state = optimizer.update(grads, opt_state, params)
+        params = optax.apply_updates(params, updates)
+        params = np.array(params, requires_grad=True)  # Maintain grad tracking
         
-        return final_params, final_energy, steps_taken
-
-    return optimize_step
+        # Check convergence
+        current_energy = cost_fn(params)
+        if abs(current_energy - prev_energy) < tol:
+            return params, current_energy, step + 1
+        prev_energy = current_energy
+    
+    return params, cost_fn(params), max_steps
 
 
 def main():
+    global H
+    
     print("="*60)
-    print("GPU-ACCELERATED VQE (lightning.gpu + Optax + JIT)")
+    print("GPU-ACCELERATED VQE (lightning.gpu + Optax)")
     print("="*60)
+    print(f"Device: {DEVICE_NAME}")
     print("This benchmark measures true GPU acceleration")
+    print("Note: No Catalyst JIT - GPU accel from lightning.gpu device")
     print("="*60)
     
-    static_ops, hf_state, doubles_wires, n_params = get_static_molecular_data()
+    bond_lengths = np.linspace(START_DIST, END_DIST, NUM_POINTS)
+    energies = np.zeros_like(bond_lengths)
     
-    print("Building JIT-compiled VQE function...")
-    vqe_runner = build_vqe_runner(static_ops, hf_state, doubles_wires)
-    
-    bond_lengths = jnp.linspace(START_DIST, END_DIST, NUM_POINTS)
-    energies = []
-    
-    params = jnp.zeros(n_params)
-
     print(f"Bond lengths to scan: {len(bond_lengths)}")
     print(f"Max VQE iterations per bond length: {MAX_STEPS}")
     print("="*60)
@@ -146,25 +120,29 @@ def main():
     for i, bl in enumerate(bond_lengths):
         bl_start = time.time()
         
-        # Get Hamiltonian for this bond length
-        H_obj = get_h2_hamiltonian(bl)
-        aligned_coeffs, _ = H_obj.terms()
+        # Generate molecular Hamiltonian for this bond length
+        coordinates = np.array([[0.0, 0.0, -bl / 2], [0.0, 0.0, bl / 2]])
+        hydrogen = qchem.Molecule(SYMBOLS, coordinates, unit=UNIT)
+        H, _ = qchem.molecular_hamiltonian(hydrogen, method=METHOD)
         
-        # Run VQE optimization (Optax inside JIT, GPU-accelerated)
-        params, energy, steps = vqe_runner(params, aligned_coeffs)
+        # Initialize parameters (fresh start for each bond length)
+        params_init = np.zeros(n_params)
+        
+        # Run VQE optimization
+        params, energy, steps = run_vqe_optax(params_init)
         total_steps += steps
         
-        energies.append(energy)
+        energies[i] = energy
         
         print(f"Step {i+1:03d}/{len(bond_lengths)}: Bond={bl:.3f} A | "
               f"Energy={energy:.6f} Ha | Time={time.time()-bl_start:.3f}s | "
               f"Iterations={steps}")
-
+    
     total_time = time.time() - start_time
     
     # Performance Summary
     print("\n" + "="*60)
-    print("PERFORMANCE METRICS - GPU (lightning.gpu + Optax + JIT)")
+    print(f"PERFORMANCE METRICS - GPU ({DEVICE_NAME} + Optax)")
     print("="*60)
     print(f"Total runtime: {total_time:.2f} seconds ({total_time/60:.2f} minutes)")
     print(f"Avg time per bond length: {total_time/len(bond_lengths):.2f} seconds")
@@ -175,10 +153,10 @@ def main():
     # Generate plot
     plt.figure(figsize=(10, 6))
     plt.plot(bond_lengths, energies, 'o-', linewidth=2, markersize=6, 
-             label="VQE (GPU lightning.gpu)")
+             label=f"VQE ({DEVICE_NAME})")
     plt.xlabel("Bond Length (Angstrom)", fontsize=12)
     plt.ylabel("Ground State Energy (Hartree)", fontsize=12)
-    plt.title("H2 Potential Energy Surface (VQE + GPU)", fontsize=14)
+    plt.title(f"H2 Potential Energy Surface (VQE + {DEVICE_NAME})", fontsize=14)
     plt.grid(True, alpha=0.3)
     plt.legend()
     plt.savefig('vqe_results_gpu.png', dpi=150, bbox_inches='tight')
