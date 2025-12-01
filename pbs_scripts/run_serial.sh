@@ -11,9 +11,10 @@
 
 cd $PBS_O_WORKDIR
 
-# Activate conda environment directly
-# Use absolute path since .bashrc modules may not work on compute nodes
-source /home2/malarchr/.conda/envs/vqe-gpu/bin/activate
+# Activate conda environment using conda's activation
+# Initialize conda for this shell session
+eval "$(/apps/spack/opt/spack/linux-rocky8-zen4/gcc-13.2.0/anaconda3-2023.09-0-3wl2qheo6tntdwtbjdmvouw24zd4rugj/bin/conda shell.bash hook)"
+conda activate vqe-gpu
 
 echo "============================================"
 echo "Serial VQE Baseline Run"
