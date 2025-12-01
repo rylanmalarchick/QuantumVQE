@@ -1,0 +1,66 @@
+VQE BENCHMARK PERMUTATIONS - MISSING TESTS
+============================================================
+
+GOAL: Separate optimizer effects from parallelization effects
+
+CURRENT BENCHMARKS (COMPLETED):
+------------------------------------------------------------
+✅ Serial PennyLane Adam (no JIT)     : 593.95s (main.py)
+✅ GPU Optax+JIT (single thread)      : 171.79s (vqe_qjit.py on GPU)
+✅ MPI-2 Optax+JIT                    : 8.45s   (vqe_mpi.py)
+✅ MPI-4 Optax+JIT                    : 6.07s   (vqe_mpi.py)
+✅ MPI-8 Optax+JIT                    : 5.48s   (vqe_mpi.py)
+✅ MPI-16 Optax+JIT                   : 5.06s   (vqe_mpi.py)
+✅ MPI-32 Optax+JIT                   : 5.04s   (vqe_mpi.py)
+
+MISSING BENCHMARKS (NEEDED):
+------------------------------------------------------------
+❌ Serial Optax+JIT (CPU-only, no GPU, no MPI)
+   - File: Need to create src/vqe_serial_optax.py
+   - PBS: Need to create pbs_scripts/run_serial_optax.sh
+   - Purpose: Isolates optimizer+JIT effect without GPU or parallelization
+   - Expected: ~200-300s (between 593.95s and 171.79s)
+
+OPTIONAL BENCHMARKS (for completeness):
+------------------------------------------------------------
+⚪ MPI-2 PennyLane Adam (no JIT)
+   - Purpose: Measures pure parallelization effect with PennyLane
+   - Expected: ~297s (2× speedup from serial 593.95s)
+   
+⚪ MPI-4 PennyLane Adam (no JIT)
+   - Expected: ~148s (4× speedup)
+
+⚪ MPI-8 PennyLane Adam (no JIT)
+   - Expected: ~74s (8× speedup)
+
+ANALYSIS BREAKDOWN:
+------------------------------------------------------------
+Once Serial Optax+JIT (CPU) is measured, we can calculate:
+
+1. OPTIMIZER EFFECT (PennyLane → Optax with JIT):
+   Speedup = Serial_PennyLane / Serial_Optax_CPU
+   Expected: ~2-3×
+
+2. GPU ACCELERATION EFFECT:
+   Speedup = Serial_Optax_CPU / GPU_Optax
+   Expected: ~1.5-2×
+
+3. MPI PARALLELIZATION EFFECT:
+   Speedup = Serial_Optax_CPU / MPI-N_Optax
+   N=2:  ~25-35×
+   N=32: ~40-60×
+
+4. COMBINED EFFECT:
+   Speedup = Serial_PennyLane / MPI-32_Optax = 117.85× (measured)
+
+PRIORITY:
+------------------------------------------------------------
+HIGH PRIORITY: Serial Optax+JIT (CPU-only) - Required for report
+LOW PRIORITY:  MPI PennyLane variants - Nice to have but not critical
+
+NEXT STEPS:
+------------------------------------------------------------
+1. Create src/vqe_serial_optax.py (copy vqe_qjit.py, ensure CPU-only)
+2. Create pbs_scripts/run_serial_optax.sh (nodes=1:ppn=1, no GPU request)
+3. Run benchmark on HPC
+4. Update analysis scripts and report with three-factor breakdown
