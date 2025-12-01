@@ -11,8 +11,8 @@
 
 cd $PBS_O_WORKDIR
 
-# Load micromamba and activate GPU environment
-eval "$(./bin/micromamba shell hook --shell bash)"
+# Source bashrc to get micromamba setup
+source ~/.bashrc
 micromamba activate vqe-gpu
 
 echo "============================================"
