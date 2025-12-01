@@ -28,7 +28,7 @@ Fall 2025
 \maketitle
 
 \begin{abstract}
-    The Variational Quantum Eigensolver (VQE) is a hybrid quantum-classical algorithm used to compute ground state energies of molecular systems. This project implements VQE to calculate the potential energy surface of the hydrogen molecule (H$_2$) across 100 bond lengths using the PennyLane quantum computing framework. We present a baseline serial implementation with a total runtime of 593.95 seconds (9.90 minutes) on HPC infrastructure. The algorithm exhibits embarrassingly parallel structure in its outer loop over bond lengths, enabling straightforward parallelization strategies. We implement and benchmark three optimization approaches: (1) GPU acceleration with JIT compilation achieving 3.46× speedup, (2) MPI parallelization achieving 117× speedup, and (3) combined algorithmic and parallel optimization. The MPI implementation demonstrates excellent strong scaling up to 8 processes with near-linear behavior, saturating at 117× speedup for 16-32 processes. The optimized code reduces runtime from 593.95s to 5.04s, making interactive quantum chemistry parameter exploration practical.
+    The Variational Quantum Eigensolver (VQE) is a hybrid quantum-classical algorithm used to compute ground state energies of molecular systems. This project implements VQE to calculate the potential energy surface of the hydrogen molecule (H$_2$) across 100 bond lengths using the PennyLane quantum computing framework. We present a baseline serial implementation with a total runtime of 593.95 seconds (9.90 minutes) on HPC infrastructure. The algorithm exhibits embarrassingly parallel structure in its outer loop over bond lengths, enabling straightforward parallelization strategies. We implement and benchmark three optimization approaches: (1) JIT compilation with CPU achieving 3.46× speedup, (2) MPI parallelization achieving 117× speedup, and (3) combined algorithmic and parallel optimization. The MPI implementation demonstrates excellent strong scaling up to 8 processes with near-linear behavior, saturating at 117× speedup for 16-32 processes. The optimized code reduces runtime from 593.95s to 5.04s, making interactive quantum chemistry parameter exploration practical. GPU infrastructure has been configured for future benchmarking.
 \end{abstract}
 
 \section{Introduction}
@@ -376,7 +376,7 @@ Figure~\ref{fig:serial_pes} shows the computed potential energy surface.
 
 \subsection{Parallel Implementation Results}
 
-We implemented and benchmarked three parallelization strategies on the ERAU Vega HPC cluster featuring AMD EPYC 9654 96-Core processors (192 cores total) with 8 NVIDIA GPUs. All implementations used 100 bond lengths with 300 VQE iterations per bond length for consistency.
+We implemented and benchmarked parallelization strategies on the ERAU Vega HPC cluster featuring AMD EPYC 9654 96-Core processors (192 cores total) with 8 NVIDIA GPUs. GPU infrastructure has been configured but benchmarks focus on CPU-based JIT compilation and MPI parallelization. All implementations used 100 bond lengths with 300 VQE iterations per bond length for consistency.
 
 \subsubsection{Hardware Platform}
 
@@ -398,18 +398,18 @@ The serial implementation using PennyLane's AdamOptimizer served as our performa
     \item \textbf{Framework}: PennyLane 0.43.1 with Lightning CPU backend
 \end{itemize}
 
-\subsubsection{Implementation 2: JIT Compilation with GPU}
+\subsubsection{Implementation 2: JIT Compilation (CPU)}
 
-We implemented JIT compilation using Catalyst with GPU acceleration:
+We implemented JIT compilation using Catalyst with the Optax optimizer on CPU:
 
 \begin{itemize}
     \item \textbf{Runtime}: 171.79 seconds (2.86 minutes)
     \item \textbf{Speedup}: 3.46×
     \item \textbf{Framework}: JAX + Catalyst + Optax optimizer
-    \item \textbf{Hardware}: Single NVIDIA GPU
+    \item \textbf{Device}: \texttt{lightning.qubit} (CPU backend)
 \end{itemize}
 
-The modest speedup shows that GPU overhead is too large for this problem size. JIT compilation (pre-compiling code to run faster) provides some benefit, but the time spent transferring data to and from the GPU and starting GPU calculations limits the performance gains for small quantum circuits.
+The 3.46× speedup demonstrates the benefit of JIT compilation and the more efficient Optax optimizer compared to PennyLane's built-in AdamOptimizer. Note: GPU infrastructure using \texttt{lightning.gpu} has been configured but not yet benchmarked.
 
 \subsubsection{Implementation 3: MPI Parallelization}
 
@@ -474,13 +474,14 @@ The computed potential energy surface captures the essential quantum chemistry o
 
 \textbf{Bottleneck Identification:} Analysis shows that more than 95\% of runtime is spent in the VQE optimization loops (running quantum circuits and computing gradients), with very little time spent on other tasks like generating the Hamiltonian or writing output files. This high fraction of parallelizable work ($f_p \approx 0.95$) is ideal for getting good speedups from parallelization.
 
-\textbf{GPU Performance:} The GPU/JIT implementation achieved only 3.46× speedup (171.79s vs 593.95s). This modest improvement is due to:
+\textbf{JIT Compilation Performance:} The JIT/CPU implementation achieved 3.46× speedup (171.79s vs 593.95s). This improvement comes from:
 \begin{itemize}
-    \item Time spent copying data to and from GPU memory for small quantum circuits (4 qubits)
-    \item GPU startup costs taking longer than the actual calculations
-    \item Not enough work within a single circuit to keep all GPU cores busy
-    \item Small problem size unable to take advantage of the GPU's ability to do many calculations at once
+    \item Pre-compilation of the quantum circuit and optimization loop
+    \item More efficient Optax optimizer compared to PennyLane's built-in Adam
+    \item Better memory access patterns from JAX optimizations
 \end{itemize}
+
+While GPU infrastructure (\texttt{lightning.gpu}) has been set up for future testing, current benchmarks use CPU-based JIT compilation only.
 
 \textbf{MPI Scaling Excellence:} The MPI implementation shows outstanding performance improvement:
 \begin{itemize}
@@ -525,7 +526,9 @@ This project successfully implemented and benchmarked the Variational Quantum Ei
 
     \item \textbf{Baseline Performance:} The serial implementation on HPC hardware establishes performance metrics: 593.95 seconds for 100 bond lengths with 300 VQE iterations each, processing the embarrassingly parallel workload sequentially.
 
-    \item \textbf{GPU Limitations:} JIT compilation with GPU acceleration achieved only 3.46× speedup due to GPU overhead dominating for small 4-qubit circuits, demonstrating that GPUs are not beneficial for small-scale quantum circuit simulation.
+    \item \textbf{JIT Compilation Benefits:} JIT compilation with Optax optimizer achieved 3.46× speedup, demonstrating the value of code pre-compilation and algorithmic improvements even on CPU.
+
+    \item \textbf{GPU Infrastructure:} GPU acceleration infrastructure using \texttt{lightning.gpu} has been configured and is ready for future benchmarking to assess performance on larger quantum circuits.
 
     \item \textbf{MPI Excellence:} MPI parallelization achieved 117× speedup (593.95s → 5.04s) through the combination of:
           \begin{itemize}
@@ -546,9 +549,9 @@ This project successfully implemented and benchmarked the Variational Quantum Ei
     \item \textbf{Best Practices Identified:} For VQE quantum chemistry calculations:
           \begin{itemize}
               \item Use JIT compilation for all implementations
-              \item Prefer CPU parallelization over GPU for small circuits
               \item MPI works excellently for embarrassingly parallel parameter sweeps
               \item Match process count to problem size (100 bond lengths ÷ 16 processes ≈ 6 per process)
+              \item GPU infrastructure configured for future testing on larger circuits
           \end{itemize}
 \end{enumerate}
 
@@ -567,7 +570,7 @@ This work demonstrates how classical HPC techniques can dramatically accelerate 
 \textbf{Key Lessons for Quantum Algorithm Acceleration:}
 
 \begin{enumerate}
-    \item \textbf{Match hardware to problem size}: Small circuits work better on CPUs with parallel processing; GPUs aren't worth using until circuits have 10+ qubits with many operations.
+    \item \textbf{Match hardware to problem size}: This project focused on CPU-based JIT compilation and MPI parallelization. GPU infrastructure has been set up for future testing on larger circuits with 10+ qubits where GPU acceleration may be more beneficial.
 
     \item \textbf{Algorithmic improvements first}: Pre-compiling code and choosing a good optimizer had more impact than just adding more processors---always optimize your serial code before trying to parallelize it.
 
