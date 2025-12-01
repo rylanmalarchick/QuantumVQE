@@ -11,9 +11,9 @@
 
 cd $PBS_O_WORKDIR
 
-# Source bashrc to get micromamba setup
-source ~/.bashrc
-micromamba activate vqe-gpu
+# Activate conda environment directly
+# Use absolute path since .bashrc modules may not work on compute nodes
+source /home2/malarchr/.conda/envs/vqe-gpu/bin/activate
 
 echo "============================================"
 echo "Serial VQE Baseline Run"
