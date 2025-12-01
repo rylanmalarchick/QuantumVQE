@@ -5,17 +5,17 @@ GOAL: Separate optimizer effects from parallelization effects
 
 CURRENT BENCHMARKS (COMPLETED):
 ------------------------------------------------------------
-✅ Serial PennyLane Adam (no JIT)     : 593.95s (main.py)
-✅ GPU Optax+JIT (single thread)      : 171.79s (vqe_qjit.py on GPU)
-✅ MPI-2 Optax+JIT                    : 8.45s   (vqe_mpi.py)
-✅ MPI-4 Optax+JIT                    : 6.07s   (vqe_mpi.py)
-✅ MPI-8 Optax+JIT                    : 5.48s   (vqe_mpi.py)
-✅ MPI-16 Optax+JIT                   : 5.06s   (vqe_mpi.py)
-✅ MPI-32 Optax+JIT                   : 5.04s   (vqe_mpi.py)
+ Serial PennyLane Adam (no JIT)     : 593.95s (main.py)
+ GPU Optax+JIT (single thread)      : 171.79s (vqe_qjit.py on GPU)
+ MPI-2 Optax+JIT                    : 8.45s   (vqe_mpi.py)
+ MPI-4 Optax+JIT                    : 6.07s   (vqe_mpi.py)
+ MPI-8 Optax+JIT                    : 5.48s   (vqe_mpi.py)
+ MPI-16 Optax+JIT                   : 5.06s   (vqe_mpi.py)
+ MPI-32 Optax+JIT                   : 5.04s   (vqe_mpi.py)
 
 MISSING BENCHMARKS (NEEDED):
 ------------------------------------------------------------
-❌ Serial Optax+JIT (CPU-only, no GPU, no MPI)
+ Serial Optax+JIT (CPU-only, no GPU, no MPI)
    - File: Need to create src/vqe_serial_optax.py
    - PBS: Need to create pbs_scripts/run_serial_optax.sh
    - Purpose: Isolates optimizer+JIT effect without GPU or parallelization
@@ -23,14 +23,14 @@ MISSING BENCHMARKS (NEEDED):
 
 OPTIONAL BENCHMARKS (for completeness):
 ------------------------------------------------------------
-⚪ MPI-2 PennyLane Adam (no JIT)
+ MPI-2 PennyLane Adam (no JIT)
    - Purpose: Measures pure parallelization effect with PennyLane
    - Expected: ~297s (2× speedup from serial 593.95s)
-   
-⚪ MPI-4 PennyLane Adam (no JIT)
+  
+ MPI-4 PennyLane Adam (no JIT)
    - Expected: ~148s (4× speedup)
 
-⚪ MPI-8 PennyLane Adam (no JIT)
+ MPI-8 PennyLane Adam (no JIT)
    - Expected: ~74s (8× speedup)
 
 ANALYSIS BREAKDOWN:
