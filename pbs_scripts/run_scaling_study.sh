@@ -1,8 +1,7 @@
 #!/bin/bash
 #PBS -N vqe_scaling_study
-#PBS -l select=1:ncpus=32:mem=256gb:ngpus=1
+#PBS -l nodes=1:ppn=32:gpus=1
 #PBS -l walltime=04:00:00
-#PBS -q gpu
 #PBS -o logs/scaling_study_output.log
 #PBS -e logs/scaling_study_error.log
 
@@ -57,9 +56,8 @@ echo ""
 #   - matplotlib
 # ============================================================================
 
-source ~/miniconda3/etc/profile.d/conda.sh 2>/dev/null || source ~/.conda/etc/profile.d/conda.sh 2>/dev/null
-
-# Use the lightning-gpu environment (has lightning.gpu without Catalyst conflict)
+# Activate conda environment with lightning.gpu
+eval "$(/apps/spack/opt/spack/linux-rocky8-zen4/gcc-13.2.0/anaconda3-2023.09-0-3wl2qheo6tntdwtbjdmvouw24zd4rugj/bin/conda shell.bash hook)"
 conda activate vqe-lightning-gpu
 
 echo "============================================"
