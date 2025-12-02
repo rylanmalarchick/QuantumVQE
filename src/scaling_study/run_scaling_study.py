@@ -335,8 +335,8 @@ def generate_plots(results: List[Dict], output_dir: str):
     
     # Plot 3: Time per iteration
     ax3 = axes[1, 0]
-    cpu_per_iter = [r['cpu']['time_per_iteration'] if r['cpu']['time_per_iteration'] else np.nan for r in results]
-    gpu_per_iter = [r['gpu']['time_per_iteration'] if r['gpu'].get('time_per_iteration') else np.nan for r in results]
+    cpu_per_iter = [r['cpu'].get('time_per_iteration') if r['cpu'].get('time_per_iteration') else np.nan for r in results]
+    gpu_per_iter = [r['gpu'].get('time_per_iteration') if r['gpu'].get('time_per_iteration') else np.nan for r in results]
     
     ax3.semilogy(qubits, cpu_per_iter, 'o-', linewidth=2, markersize=8,
                  color='#3498DB', label='CPU+JIT')
@@ -601,13 +601,14 @@ def run_scaling_study(
         cpu_t = r['cpu'].get('time_seconds', 'N/A')
         gpu_t = r['gpu'].get('time_seconds', 'N/A')
         speedup = r.get('speedup', 'N/A')
-        winner = r.get('winner', 'N/A')
+        winner = r.get('winner') or 'N/A'
         
         cpu_str = f"{cpu_t:.2f}" if isinstance(cpu_t, float) else str(cpu_t)
         gpu_str = f"{gpu_t:.2f}" if isinstance(gpu_t, float) else str(gpu_t)
         speedup_str = f"{speedup:.2f}x" if isinstance(speedup, float) else str(speedup)
+        winner_str = str(winner)
         
-        print(f"{r['n_qubits']:<8} {cpu_str:<12} {gpu_str:<12} {speedup_str:<10} {winner:<10}")
+        print(f"{r['n_qubits']:<8} {cpu_str:<12} {gpu_str:<12} {speedup_str:<10} {winner_str:<10}")
     print("=" * 70)
     print(f"End time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"Results saved to: {output_dir}")
