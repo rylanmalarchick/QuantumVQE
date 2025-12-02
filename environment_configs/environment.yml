@@ -1,0 +1,27 @@
+name: vqe-hpc-env
+channels:
+    - conda-forge
+dependencies:
+    # Core Python and HPC/Scientific Compute
+    - python=3.12
+    - pip
+    - numpy
+    - scipy
+    - matplotlib
+    - 
+
+    # Task-based parallelism
+    # - ray
+
+    # Dev and Analysis Tools
+    - jupyter
+    - pytest
+
+    - pip:
+        - pennylane
+        - jax
+        - jaxlib
+        - pennylane-catalyst
+        - optax
+
+    
