@@ -1,12 +1,13 @@
 #!/bin/bash
 #PBS -N multi_node_smoke
-#PBS -l nodes=4:ppn=4:gpus=1
+#PBS -l nodes=2:ppn=4:gpus=1
 #PBS -l walltime=00:30:00
+#PBS -q shortq
 #PBS -o logs/multi_node_smoke_output.log
 #PBS -e logs/multi_node_smoke_error.log
 
 # Multi-node GPU smoke test
-# Requests 4 nodes, each with 1 GPU
+# Requests 2 nodes (shortq max), each with 1 GPU
 
 cd $PBS_O_WORKDIR
 
