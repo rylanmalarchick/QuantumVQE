@@ -8,7 +8,7 @@ This test verifies:
 3. Basic VQE computation works on each rank
 
 Usage:
-    mpirun -np 4 python multi_node_smoke_test.py
+    mpiexec -n 2 python multi_node_smoke_test.py
     
 Or via PBS with multiple nodes.
 """
@@ -67,9 +67,14 @@ def main():
             from pennylane import numpy as pnp
             import numpy as np
             
-            # Small 4-qubit test
+            # Try to use lightning.gpu, fall back to lightning.qubit
             n_qubits = 4
-            dev = qml.device("lightning.gpu", wires=n_qubits)
+            try:
+                dev = qml.device("lightning.gpu", wires=n_qubits)
+                device_name = "lightning.gpu"
+            except Exception:
+                dev = qml.device("lightning.qubit", wires=n_qubits)
+                device_name = "lightning.qubit (GPU not available in env)"
             
             # Simple Hamiltonian
             coeffs = [1.0] * n_qubits + [0.5] * (n_qubits - 1)
@@ -96,7 +101,7 @@ def main():
             
             final_energy = float(circuit(params))
             
-            print(f"[Rank {rank}] VQE complete: energy={final_energy:.4f}, time={elapsed:.2f}s")
+            print(f"[Rank {rank}] Device: {device_name} | VQE energy={final_energy:.4f} | time={elapsed:.2f}s")
             sys.stdout.flush()
             
             status = "SUCCESS"
@@ -121,7 +126,7 @@ def main():
         print(f"Results: {all_status}")
         
         successes = sum(1 for s in all_status if s == "SUCCESS")
-        print(f"\n{'SUCCESS' if successes == size else 'PARTIAL'}: {successes}/{size} ranks completed GPU VQE")
+        print(f"\n{'SUCCESS' if successes == size else 'PARTIAL'}: {successes}/{size} ranks completed VQE")
         print("="*60)
 
 
