@@ -1,0 +1,100 @@
+{
+  "timestamp": "2025-12-01T22:49:04.416159",
+  "n_gpus": 4,
+  "max_qubits_test": {
+    "max_achieved": 29,
+    "results": [
+      {
+        "qubits": 26,
+        "success": true,
+        "time_5_iter": 3.1184228700585663,
+        "time_per_iter": 0.6236845740117133,
+        "final_energy": -3.016690533598041,
+        "est_gpu_mem_gb": 4.0
+      },
+      {
+        "qubits": 28,
+        "success": true,
+        "time_5_iter": 12.28910456597805,
+        "time_per_iter": 2.45782091319561,
+        "final_energy": -23.59975179191988,
+        "est_gpu_mem_gb": 16.0
+      },
+      {
+        "qubits": 29,
+        "success": true,
+        "time_5_iter": 25.354136192938313,
+        "time_per_iter": 5.070827238587663,
+        "final_energy": -19.6631571853011,
+        "est_gpu_mem_gb": 32.0
+      },
+      {
+        "qubits": 30,
+        "success": false,
+        "error": "[/project/pennylane_lightning/core/utils/cuda_utils/DataBuffer.hpp][Line:68][Method:DataBuffer]: Error in PennyLane Lightning: out of memory"
+      }
+    ]
+  },
+  "throughput_test": {
+    "n_gpus": 4,
+    "problems_per_gpu": 3,
+    "total_problems": 12,
+    "wall_clock_time": 12.265645178034902,
+    "throughput_per_second": 0.9783423395851517,
+    "per_gpu_results": [
+      {
+        "gpu_id": 0,
+        "n_problems": 3,
+        "total_time": 10.712716446025297,
+        "avg_time_per_problem": 3.383946469441677,
+        "energies": [
+          -13.999142942907584,
+          -17.998305719175754,
+          -17.9266262349154
+        ]
+      },
+      {
+        "gpu_id": 1,
+        "n_problems": 3,
+        "total_time": 11.95719673205167,
+        "avg_time_per_problem": 3.807976221976181,
+        "energies": [
+          -17.994607101873576,
+          -15.999604595566447,
+          -19.98431706557459
+        ]
+      },
+      {
+        "gpu_id": 2,
+        "n_problems": 3,
+        "total_time": 12.265645178034902,
+        "avg_time_per_problem": 3.9244873370820037,
+        "energies": [
+          -13.999209559529149,
+          -15.99274992948477,
+          -9.99998699294341
+        ]
+      },
+      {
+        "gpu_id": 3,
+        "n_problems": 3,
+        "total_time": 12.25400713016279,
+        "avg_time_per_problem": 3.9201233933369317,
+        "energies": [
+          -11.99910318115536,
+          -13.999768169552722,
+          -9.999903459309902
+        ]
+      }
+    ]
+  },
+  "scaling_test": {
+    "n_problems": 8,
+    "qubits": 22,
+    "iterations": 15,
+    "single_gpu_estimated_time": 31.991259278031066,
+    "multi_gpu_time": 8.043112118029967,
+    "speedup": 3.9774727504192517,
+    "efficiency_percent": 99.43681876048129
+  }
+}

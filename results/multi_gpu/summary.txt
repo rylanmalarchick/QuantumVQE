@@ -1,0 +1,26 @@
+
+Multi-GPU VQE Benchmark Results
+================================
+Hardware: 4x NVIDIA H100 (80GB each)
+Timestamp: 2025-12-01T22:49:04.416159
+
+1. MAX QUBIT SCALING
+   - Maximum qubits achieved: 29
+   - State vector at 29q: 8.0 GB
+   - Estimated GPU memory: 32.0 GB
+
+2. MULTI-GPU THROUGHPUT
+   - Total problems: 12
+   - Wall clock time: 12.27s
+   - Throughput: 0.978 problems/sec
+   - Effective speedup: 4x (perfect parallel)
+
+3. SCALING EFFICIENCY
+   - Speedup: 3.98x
+   - Parallel efficiency: 99.4%
+
+Generated plots:
+  - results/multi_gpu/max_qubit_scaling.png
+  - results/multi_gpu/throughput_comparison.png
+  - results/multi_gpu/scaling_efficiency.png
+  - results/multi_gpu/multi_gpu_summary.png
