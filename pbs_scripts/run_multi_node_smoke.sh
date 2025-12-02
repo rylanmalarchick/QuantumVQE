@@ -1,13 +1,13 @@
 #!/bin/bash
-#PBS -N multi_node_smoke
-#PBS -l nodes=2:ppn=4:gpus=1
+#PBS -N multi_gpu_smoke
+#PBS -l nodes=1:ppn=8:gpus=4
 #PBS -l walltime=00:30:00
 #PBS -q shortq
-#PBS -o logs/multi_node_smoke_output.log
-#PBS -e logs/multi_node_smoke_error.log
+#PBS -o logs/multi_gpu_smoke_output.log
+#PBS -e logs/multi_gpu_smoke_error.log
 
-# Multi-node GPU smoke test
-# Requests 2 nodes (shortq max), each with 1 GPU
+# Multi-GPU smoke test (single node, 4 GPUs)
+# Tests MPI parallelism with multiple GPUs on one node
 
 cd $PBS_O_WORKDIR
 
@@ -19,25 +19,22 @@ eval "$(/apps/spack/opt/spack/linux-rocky8-zen4/gcc-13.2.0/anaconda3-2023.09-0-3
 conda activate vqe-gpu
 
 echo "========================================"
-echo "Multi-Node GPU Smoke Test"
+echo "Multi-GPU Smoke Test (Single Node)"
 echo "========================================"
 echo "Job ID: $PBS_JOBID"
 echo "Start time: $(date)"
 echo "Working directory: $(pwd)"
-echo ""
-echo "Nodes allocated:"
-cat $PBS_NODEFILE | sort -u
+echo "Host: $(hostname)"
 echo ""
 echo "Python: $(which python)"
 echo "mpiexec: $(which mpiexec 2>/dev/null || echo 'not found')"
 echo ""
-echo "GPU Info (on head node):"
-nvidia-smi --query-gpu=name,memory.total --format=csv 2>/dev/null || echo "nvidia-smi not available on login node"
+echo "GPU Info:"
+nvidia-smi --query-gpu=index,name,memory.total --format=csv
 echo "========================================"
 
-# Run 1 process per node (2 nodes = 2 ranks)
-# Use hostfile to ensure distribution across nodes
-mpiexec -n 2 -hostfile $PBS_NODEFILE -npernode 1 python src/scaling_study/multi_node_smoke_test.py
+# Run 4 MPI ranks, one per GPU
+mpiexec -n 4 python src/scaling_study/multi_node_smoke_test.py
 
 echo "========================================"
 echo "Smoke test complete"
