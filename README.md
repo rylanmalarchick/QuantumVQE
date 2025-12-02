@@ -32,7 +32,7 @@ where $|\psi(\theta)\rangle$ is the quantum state prepared by our ansatz and $H$
 
 ### Environment Configurations
 
-This project provides multiple environment configurations in `environment_configs/`:
+This project provides multiple environment configurations in `configs/`:
 
 1. **`environment.yml`** - Basic serial implementation (CPU only)
 2. **`vqe-mpi.yml`** - CPU-based MPI parallelization 
@@ -45,11 +45,11 @@ For local testing and development:
 
 ```bash
 # Create environment for serial/basic testing
-conda env create -f environment_configs/environment.yml
+conda env create -f configs/environment.yml
 conda activate quantumvqe
 
 # OR for MPI testing (requires OpenMPI)
-conda env create -f environment_configs/vqe-mpi.yml
+conda env create -f configs/vqe-mpi.yml
 conda activate vqe-openmpi
 ```
 
@@ -59,7 +59,7 @@ For running on GPU-enabled HPC clusters:
 
 ```bash
 # Create GPU-enabled environment
-conda env create -f environment_configs/vqe-gpu.yml
+conda env create -f configs/vqe-gpu.yml
 conda activate vqe-gpu
 
 # Verify GPU access
@@ -82,26 +82,26 @@ python -c "import jax; print(f'GPUs available: {jax.devices()}')"
 **Serial implementation:**
 ```bash
 # Quick test (5 bond lengths, 50 iterations)
-python src/test_main.py
+python src/main_study/test_main.py
 
 # Full run
-python src/main.py
+python src/main_study/main.py
 ```
 
 **JIT-compiled version with Optax** (recommended):
 ```bash
-python src/vqe_serial_optax.py
+python src/main_study/vqe_serial_optax.py
 ```
 
 **GPU-accelerated version**:
 ```bash
-python src/vqe_gpu.py
+python src/main_study/vqe_gpu.py
 ```
 
 **MPI parallel version** (requires OpenMPI):
 ```bash
 # Run with 4 MPI processes
-mpirun -np 4 python src/vqe_mpi.py
+mpirun -np 4 python src/main_study/vqe_mpi.py
 ```
 
 ### HPC Cluster Execution
@@ -169,29 +169,30 @@ Benchmarked on ERAU Vega HPC cluster with AMD EPYC 9654 (192 cores) and 4× NVID
 ```
 QuantumVQE/
 ├── src/
-│   ├── main.py              # Serial VQE implementation (baseline)
-│   ├── test_main.py         # Quick test version
-│   ├── vqe_serial_optax.py  # JIT-compiled VQE with Optax
-│   ├── vqe_gpu.py           # GPU-accelerated VQE
-│   ├── vqe_mpi.py           # MPI parallel VQE
-│   ├── vqe_qjit.py          # Catalyst JIT VQE
-│   ├── vqe_params.py        # Shared configuration parameters
+│   ├── main_study/          # H2 molecule VQE implementations
+│   │   ├── main.py              # Serial VQE (baseline)
+│   │   ├── test_main.py         # Quick test version
+│   │   ├── vqe_serial_optax.py  # JIT-compiled with Optax
+│   │   ├── vqe_gpu.py           # GPU-accelerated
+│   │   ├── vqe_mpi.py           # MPI parallel
+│   │   ├── vqe_qjit.py          # Catalyst JIT
+│   │   └── vqe_params.py        # Shared parameters
 │   └── scaling_study/       # GPU scaling benchmarks
 │       ├── run_scaling_study.py
 │       ├── comprehensive_gpu_benchmark.py
 │       └── hamiltonians.py
 ├── pbs_scripts/             # PBS job submission scripts
 ├── scripts/                 # Analysis and plotting scripts
-├── configs/                 # Configuration files
 ├── results/                 # Output plots and data
+│   ├── main_study/          # H2 VQE results
 │   ├── scaling_study/       # CPU vs GPU scaling results
 │   └── multi_gpu/           # Multi-GPU benchmark results
-├── deliverables/            # Project report and documentation
-├── environment_configs/     # Conda environment files
+├── configs/                 # Conda environment files
 │   ├── environment.yml
 │   ├── vqe-mpi.yml
 │   ├── vqe-gpu.yml
 │   └── vqe-lightning-gpu.yml
+├── deliverables/            # Project report and documentation
 └── logs/                    # HPC job logs
 ```
 

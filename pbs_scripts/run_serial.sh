@@ -26,7 +26,7 @@ echo "Python: $(which python)"
 echo "============================================"
 
 # Run the serial code
-python src/main.py
+python src/main_study/main.py
 
 echo "============================================"
 echo "End time: $(date)"

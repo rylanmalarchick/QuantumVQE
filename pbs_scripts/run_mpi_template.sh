@@ -29,7 +29,7 @@ cat $PBS_NODEFILE
 echo "============================================"
 
 # Run MPI code
-mpiexec -n NPROCS python src/vqe_mpi.py
+mpiexec -n NPROCS python src/main_study/vqe_mpi.py
 
 echo "============================================"
 echo "End time: $(date)"
