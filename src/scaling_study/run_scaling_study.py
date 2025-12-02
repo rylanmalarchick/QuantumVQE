@@ -169,18 +169,19 @@ def run_cpu_benchmark(n_qubits: int, n_iterations: int, seed: int = 42) -> Dict:
 
 
 # ============================================================================
-# GPU Benchmark (lightning.gpu + Optax)
+# GPU Benchmark (lightning.gpu + Gradient Descent)
 # ============================================================================
 
 def run_gpu_benchmark(n_qubits: int, n_iterations: int, seed: int = 42) -> Dict:
     """
     Run VQE benchmark on GPU.
     
-    Uses: lightning.gpu + Optax (no Catalyst JIT due to dependency conflict)
+    Uses: lightning.gpu + PennyLane's GradientDescentOptimizer
+    Note: Optax is incompatible with PennyLane autograd arrays, so we use
+          PennyLane's native optimizer instead.
     """
     import pennylane as qml
     from pennylane import numpy as pnp  # PennyLane's numpy for autograd
-    import optax
     
     # Check if lightning.gpu is available
     try:
@@ -215,9 +216,8 @@ def run_gpu_benchmark(n_qubits: int, n_iterations: int, seed: int = 42) -> Dict:
     np.random.seed(seed)
     params = pnp.array(np.random.randn(n_params) * 0.1, requires_grad=True)
     
-    # Optimizer
-    optimizer = optax.adam(LEARNING_RATE)
-    opt_state = optimizer.init(params)
+    # Use PennyLane's native Adam optimizer (compatible with autograd)
+    optimizer = qml.AdamOptimizer(stepsize=LEARNING_RATE)
     
     # Warm-up run (GPU kernel compilation)
     _ = circuit(params)
@@ -228,13 +228,10 @@ def run_gpu_benchmark(n_qubits: int, n_iterations: int, seed: int = 42) -> Dict:
     start_time = time.perf_counter()
     
     for i in range(n_iterations):
-        grads = qml.grad(circuit)(params)
-        updates, opt_state = optimizer.update(grads, opt_state, params)
-        params = params + updates  # Manual update for autograd
+        params, energy = optimizer.step_and_cost(circuit, params)
         
         if i % 10 == 0 or i == n_iterations - 1:
-            energy = float(circuit(params))
-            energies.append(energy)
+            energies.append(float(energy))
     
     elapsed = time.perf_counter() - start_time
     final_energy = float(circuit(params))
