@@ -1,0 +1,325 @@
+[
+  {
+    "n_qubits": 4,
+    "n_iterations": 100,
+    "description": "Trivial - GPU overhead dominates",
+    "memory_estimate": {
+      "state_vector_mb": 0.000244140625,
+      "cpu_estimate_mb": 0.000732421875,
+      "gpu_estimate_mb": 0.0009765625,
+      "cpu_estimate_gb": 7.152557373046875e-07,
+      "gpu_estimate_gb": 9.5367431640625e-07
+    },
+    "cpu": {
+      "time_seconds": 7.013218681095168,
+      "time_per_iteration": 0.07013218681095168,
+      "final_energy": -3.329620838165283,
+      "n_iterations": 100,
+      "energies": [
+        -3.0735833644866943,
+        -3.189527750015259,
+        -3.232180118560791,
+        -3.2821757793426514,
+        -3.296010732650757,
+        -3.30466890335083,
+        -3.315753221511841,
+        -3.3230106830596924,
+        -3.3267910480499268,
+        -3.328752040863037,
+        -3.329620838165283
+      ]
+    },
+    "gpu": {
+      "error": "array() got an unexpected keyword argument 'requires_grad'",
+      "time_seconds": null
+    },
+    "speedup": null,
+    "winner": null
+  },
+  {
+    "n_qubits": 8,
+    "n_iterations": 100,
+    "description": "Small - Still CPU territory",
+    "memory_estimate": {
+      "state_vector_mb": 0.00390625,
+      "cpu_estimate_mb": 0.01171875,
+      "gpu_estimate_mb": 0.015625,
+      "cpu_estimate_gb": 1.1444091796875e-05,
+      "gpu_estimate_gb": 1.52587890625e-05
+    },
+    "cpu": {
+      "time_seconds": 8.962758837966248,
+      "time_per_iteration": 0.08962758837966249,
+      "final_energy": -7.430907249450684,
+      "n_iterations": 100,
+      "energies": [
+        -6.94658088684082,
+        -7.26501989364624,
+        -7.341370582580566,
+        -7.349966049194336,
+        -7.355843544006348,
+        -7.363096714019775,
+        -7.367786884307861,
+        -7.375644207000732,
+        -7.38881254196167,
+        -7.408215045928955,
+        -7.430907249450684
+      ]
+    },
+    "gpu": {
+      "error": "array() got an unexpected keyword argument 'requires_grad'",
+      "time_seconds": null
+    },
+    "speedup": null,
+    "winner": null
+  },
+  {
+    "n_qubits": 12,
+    "n_iterations": 80,
+    "description": "Medium - Approaching crossover",
+    "memory_estimate": {
+      "state_vector_mb": 0.0625,
+      "cpu_estimate_mb": 0.1875,
+      "gpu_estimate_mb": 0.25,
+      "cpu_estimate_gb": 0.00018310546875,
+      "gpu_estimate_gb": 0.000244140625
+    },
+    "cpu": {
+      "time_seconds": 6.107852458953857,
+      "time_per_iteration": 0.07634815573692322,
+      "final_energy": -11.490124702453613,
+      "n_iterations": 80,
+      "energies": [
+        -10.980757713317871,
+        -11.277359962463379,
+        -11.349566459655762,
+        -11.369751930236816,
+        -11.37934398651123,
+        -11.392531394958496,
+        -11.412432670593262,
+        -11.442193031311035,
+        -11.490124702453613
+      ]
+    },
+    "gpu": {
+      "error": "array() got an unexpected keyword argument 'requires_grad'",
+      "time_seconds": null
+    },
+    "speedup": null,
+    "winner": null
+  },
+  {
+    "n_qubits": 14,
+    "n_iterations": 60,
+    "description": "Medium - Crossover zone",
+    "memory_estimate": {
+      "state_vector_mb": 0.25,
+      "cpu_estimate_mb": 0.75,
+      "gpu_estimate_mb": 1.0,
+      "cpu_estimate_gb": 0.000732421875,
+      "gpu_estimate_gb": 0.0009765625
+    },
+    "cpu": {
+      "time_seconds": 5.976857928093523,
+      "time_per_iteration": 0.09961429880155871,
+      "final_energy": -13.372188568115234,
+      "n_iterations": 60,
+      "energies": [
+        -12.906901359558105,
+        -13.235386848449707,
+        -13.350290298461914,
+        -13.354412078857422,
+        -13.368094444274902,
+        -13.371051788330078,
+        -13.372188568115234
+      ]
+    },
+    "gpu": {
+      "error": "array() got an unexpected keyword argument 'requires_grad'",
+      "time_seconds": null
+    },
+    "speedup": null,
+    "winner": null
+  },
+  {
+    "n_qubits": 16,
+    "n_iterations": 50,
+    "description": "Medium-Large - GPU warming up",
+    "memory_estimate": {
+      "state_vector_mb": 1.0,
+      "cpu_estimate_mb": 3.0,
+      "gpu_estimate_mb": 4.0,
+      "cpu_estimate_gb": 0.0029296875,
+      "gpu_estimate_gb": 0.00390625
+    },
+    "cpu": {
+      "time_seconds": 6.47779377293773,
+      "time_per_iteration": 0.1295558754587546,
+      "final_energy": -15.38901424407959,
+      "n_iterations": 50,
+      "energies": [
+        -14.79835033416748,
+        -15.161163330078125,
+        -15.356522560119629,
+        -15.360184669494629,
+        -15.380263328552246,
+        -15.38901424407959
+      ]
+    },
+    "gpu": {
+      "error": "array() got an unexpected keyword argument 'requires_grad'",
+      "time_seconds": null
+    },
+    "speedup": null,
+    "winner": null
+  },
+  {
+    "n_qubits": 18,
+    "n_iterations": 40,
+    "description": "Large - GPU should lead",
+    "memory_estimate": {
+      "state_vector_mb": 4.0,
+      "cpu_estimate_mb": 12.0,
+      "gpu_estimate_mb": 16.0,
+      "cpu_estimate_gb": 0.01171875,
+      "gpu_estimate_gb": 0.015625
+    },
+    "cpu": {
+      "time_seconds": 13.140682431170717,
+      "time_per_iteration": 0.3285170607792679,
+      "final_energy": -17.376890182495117,
+      "n_iterations": 40,
+      "energies": [
+        -16.88640022277832,
+        -17.15819549560547,
+        -17.34610939025879,
+        -17.362184524536133,
+        -17.376890182495117
+      ]
+    },
+    "gpu": {
+      "error": "array() got an unexpected keyword argument 'requires_grad'",
+      "time_seconds": null
+    },
+    "speedup": null,
+    "winner": null
+  },
+  {
+    "n_qubits": 20,
+    "n_iterations": 30,
+    "description": "Large - GPU advantage clear",
+    "memory_estimate": {
+      "state_vector_mb": 16.0,
+      "cpu_estimate_mb": 48.0,
+      "gpu_estimate_mb": 64.0,
+      "cpu_estimate_gb": 0.046875,
+      "gpu_estimate_gb": 0.0625
+    },
+    "cpu": {
+      "time_seconds": 45.54935265309177,
+      "time_per_iteration": 1.5183117551030592,
+      "final_energy": -19.35609245300293,
+      "n_iterations": 30,
+      "energies": [
+        -18.710643768310547,
+        -19.181568145751953,
+        -19.33075714111328,
+        -19.35609245300293
+      ]
+    },
+    "gpu": {
+      "error": "array() got an unexpected keyword argument 'requires_grad'",
+      "time_seconds": null
+    },
+    "speedup": null,
+    "winner": null
+  },
+  {
+    "n_qubits": 22,
+    "n_iterations": 25,
+    "description": "Very Large - Significant GPU win",
+    "memory_estimate": {
+      "state_vector_mb": 64.0,
+      "cpu_estimate_mb": 192.0,
+      "gpu_estimate_mb": 256.0,
+      "cpu_estimate_gb": 0.1875,
+      "gpu_estimate_gb": 0.25
+    },
+    "cpu": {
+      "time_seconds": 160.26867686514743,
+      "time_per_iteration": 6.410747074605897,
+      "final_energy": -21.326927185058594,
+      "n_iterations": 25,
+      "energies": [
+        -20.731887817382812,
+        -21.193836212158203,
+        -21.328794479370117,
+        -21.326927185058594
+      ]
+    },
+    "gpu": {
+      "error": "array() got an unexpected keyword argument 'requires_grad'",
+      "time_seconds": null
+    },
+    "speedup": null,
+    "winner": null
+  },
+  {
+    "n_qubits": 24,
+    "n_iterations": 20,
+    "description": "Very Large - Major GPU advantage",
+    "memory_estimate": {
+      "state_vector_mb": 256.0,
+      "cpu_estimate_mb": 768.0,
+      "gpu_estimate_mb": 1024.0,
+      "cpu_estimate_gb": 0.75,
+      "gpu_estimate_gb": 1.0
+    },
+    "cpu": {
+      "time_seconds": 465.03741121292114,
+      "time_per_iteration": 23.251870560646058,
+      "final_energy": -23.30044937133789,
+      "n_iterations": 20,
+      "energies": [
+        -22.509689331054688,
+        -23.066329956054688,
+        -23.30044937133789
+      ]
+    },
+    "gpu": {
+      "error": "array() got an unexpected keyword argument 'requires_grad'",
+      "time_seconds": null
+    },
+    "speedup": null,
+    "winner": null
+  },
+  {
+    "n_qubits": 26,
+    "n_iterations": 15,
+    "description": "Huge - Pushing limits",
+    "memory_estimate": {
+      "state_vector_mb": 1024.0,
+      "cpu_estimate_mb": 3072.0,
+      "gpu_estimate_mb": 4096.0,
+      "cpu_estimate_gb": 3.0,
+      "gpu_estimate_gb": 4.0
+    },
+    "cpu": {
+      "time_seconds": 1410.7120715091005,
+      "time_per_iteration": 94.04747143394003,
+      "final_energy": -25.158945083618164,
+      "n_iterations": 15,
+      "energies": [
+        -24.52299690246582,
+        -25.007083892822266,
+        -25.158945083618164
+      ]
+    },
+    "gpu": {
+      "error": "array() got an unexpected keyword argument 'requires_grad'",
+      "time_seconds": null
+    },
+    "speedup": null,
+    "winner": null
+  }
+]
