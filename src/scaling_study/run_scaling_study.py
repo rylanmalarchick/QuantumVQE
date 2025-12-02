@@ -179,6 +179,7 @@ def run_gpu_benchmark(n_qubits: int, n_iterations: int, seed: int = 42) -> Dict:
     Uses: lightning.gpu + Optax (no Catalyst JIT due to dependency conflict)
     """
     import pennylane as qml
+    from pennylane import numpy as pnp  # PennyLane's numpy for autograd
     import optax
     
     # Check if lightning.gpu is available
@@ -210,9 +211,9 @@ def run_gpu_benchmark(n_qubits: int, n_iterations: int, seed: int = 42) -> Dict:
                 qml.CNOT(wires=[q, q + 1])
         return qml.expval(H)
     
-    # Initialize parameters
+    # Initialize parameters (use PennyLane numpy for autograd compatibility)
     np.random.seed(seed)
-    params = np.array(np.random.randn(n_params) * 0.1, requires_grad=True)
+    params = pnp.array(np.random.randn(n_params) * 0.1, requires_grad=True)
     
     # Optimizer
     optimizer = optax.adam(LEARNING_RATE)
