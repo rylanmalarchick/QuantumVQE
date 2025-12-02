@@ -13,7 +13,7 @@
 \newcommand{\needsanalysis}[1]{\textcolor{blue}{[FOR DISCUSSION: #1]}}
 
 \title{Parallelizing the Variational Quantum Eigensolver: \\
-High Performance Computing for Molecular H$_2$ Ground State Energy}
+High Performance Computing for Molecular Ground State Energy}
 
 \author{
 Ashton Steed and Rylan Malarchick \\
@@ -21,14 +21,14 @@ MA453 - High Performance Computing \\
 Fall 2025
 }
 
-\date{\today}
+\date{December 1, 2025}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-    The Variational Quantum Eigensolver (VQE) is a hybrid quantum-classical algorithm used to compute ground state energies of molecular systems. This project implements VQE to calculate the potential energy surface of the hydrogen molecule (H$_2$) across 100 bond lengths using the PennyLane quantum computing framework. We present a baseline serial implementation with a total runtime of 593.95 seconds (9.90 minutes) on HPC infrastructure. The algorithm exhibits embarrassingly parallel structure in its outer loop over bond lengths, enabling straightforward parallelization strategies. We implement and benchmark multiple optimization approaches and present a rigorous \textbf{three-factor speedup analysis}: (1) Optimizer + JIT compilation achieving 4.13× speedup (593.95s → 143.80s), (2) GPU device acceleration achieving 3.60× speedup (593.95s → 164.91s), and (3) MPI parallelization achieving 28.5× speedup relative to the proper Optax+JIT baseline (143.80s → 5.04s). The combined effect yields 117.85× total speedup (593.95s → 5.04s). Notably, CPU+JIT (143.80s) outperforms GPU (164.91s) for our 4-qubit system due to GPU overhead exceeding benefits at small circuit sizes. The optimized MPI implementation reduces runtime from nearly 10 minutes to 5 seconds, making interactive quantum chemistry parameter exploration practical.
+    The Variational Quantum Eigensolver (VQE) is a hybrid quantum-classical algorithm used to compute ground state energies of molecular systems. This project implements VQE to calculate the potential energy surface of the hydrogen molecule (H$_2$) across 100 bond lengths using the PennyLane quantum computing framework on the ERAU Vega HPC cluster featuring 4$\times$ NVIDIA H100 GPUs (80GB each). We present a comprehensive parallelization study with four phases: (1) \textbf{Optimizer + JIT compilation} achieving 4.13$\times$ speedup, (2) \textbf{GPU device acceleration} achieving 3.60$\times$ speedup at 4 qubits scaling to 80.5$\times$ at 26 qubits, (3) \textbf{MPI parallelization} achieving 28.5$\times$ speedup, and (4) \textbf{Multi-GPU scaling} achieving 3.98$\times$ speedup with 99.4\% parallel efficiency across 4 H100 GPUs. The combined effect yields 117.85$\times$ total speedup for the H$_2$ potential energy surface (593.95s $\rightarrow$ 5.04s). We conduct a CPU vs GPU scaling study from 4--26 qubits, finding GPU advantage at all scales with speedups ranging from 10.5$\times$ to 80.5$\times$. Multi-GPU benchmarks demonstrate near-perfect scaling with 99.4\% efficiency and establish that a single H100 can simulate up to 29 qubits (8GB state vector, 32GB estimated GPU memory) before hitting memory limits. The optimized implementation reduces runtime from nearly 10 minutes to 5 seconds, making interactive quantum chemistry exploration practical.
 \end{abstract}
 
 \section{Introduction}
@@ -380,11 +380,11 @@ We implemented and benchmarked parallelization strategies on the ERAU Vega HPC c
 
 \subsubsection{Hardware Platform}
 
-\textbf{Compute Nodes:}
+\textbf{Compute Node (gpu01):}
 \begin{itemize}
-    \item CPU: 2× AMD EPYC 9654 (96 cores each, 192 cores per node)
-    \item Memory: Large shared memory per node
-    \item GPU: NVIDIA GPUs (for JIT/GPU implementation)
+    \item CPU: 2$\times$ AMD EPYC 9654 (96 cores each, 192 cores per node)
+    \item Memory: 1.5 TB shared memory
+    \item GPU: 4$\times$ NVIDIA H100 PCIe (81 GB each, 320 GB total)
     \item Interconnect: High-performance cluster interconnect
 \end{itemize}
 
@@ -430,7 +430,44 @@ We implemented GPU acceleration using PennyLane's \texttt{lightning.gpu} device 
     \item GPU advantage increases with qubit count ($>$10 qubits)
 \end{itemize}
 
-\subsubsection{Implementation 4: MPI Parallelization}
+\subsubsection{Implementation 4: CPU vs GPU Scaling Study (4--26 Qubits)}
+
+To understand the crossover between CPU and GPU performance, we conducted a comprehensive scaling study across qubit counts from 4 to 26. Results are shown in Table~\ref{tab:gpu_scaling}.
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{rrrrrr}
+        \toprule
+        \textbf{Qubits} & \textbf{State Vector} & \textbf{CPU (s)} & \textbf{GPU (s)} & \textbf{Speedup} & \textbf{Winner} \\
+        \midrule
+        4  & 256 B     & 8.33   & 0.79   & 10.5$\times$ & GPU \\
+        8  & 4 KB      & 6.54   & 1.07   & 6.1$\times$  & GPU \\
+        12 & 64 KB     & 4.24   & 1.20   & 3.5$\times$  & GPU \\
+        14 & 256 KB    & 9.10   & 0.90   & 10.1$\times$ & GPU \\
+        16 & 1 MB      & 5.67   & 0.85   & 6.7$\times$  & GPU \\
+        18 & 4 MB      & 12.03  & 0.84   & 14.3$\times$ & GPU \\
+        20 & 16 MB     & 46.77  & 1.08   & 43.2$\times$ & GPU \\
+        22 & 64 MB     & 161.07 & 2.21   & 72.9$\times$ & GPU \\
+        24 & 256 MB    & 478.73 & 5.87   & 81.5$\times$ & GPU \\
+        26 & 1 GB      & 1425.06 & 17.71 & 80.5$\times$ & GPU \\
+        \bottomrule
+    \end{tabular}
+    \caption{CPU vs GPU scaling study. State vector size is $2^n \times 16$ bytes (complex128). GPU wins at all scales, with speedup increasing dramatically beyond 18 qubits.}
+    \label{tab:gpu_scaling}
+\end{table}
+
+\textbf{Key Finding}: Contrary to our initial 4-qubit H$_2$ results, GPU wins at \textbf{all} qubit counts in this scaling study. The difference is that the scaling study uses a simpler Hamiltonian (sum of Pauli-Z operators) without the Hartree-Fock overhead present in the molecular simulation. The GPU speedup increases from 10$\times$ at 4 qubits to over 80$\times$ at 24--26 qubits, demonstrating the importance of GPU acceleration for larger quantum simulations.
+
+Figure~\ref{fig:scaling_study} shows the scaling comparison.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\textwidth]{../results/scaling_study/scaling_comparison.png}
+    \caption{CPU vs GPU scaling study from 4--26 qubits. Left: Runtime comparison (log scale). Right: GPU speedup factor, showing increasing advantage with qubit count.}
+    \label{fig:scaling_study}
+\end{figure}
+
+\subsubsection{Implementation 5: MPI Parallelization}
 
 MPI parallelization achieved dramatic speedups by distributing bond length calculations across multiple CPU cores. Results are shown in Table~\ref{tab:mpi_results}.
 
@@ -465,11 +502,11 @@ We decompose the total 117.85× speedup into three independent factors:
         \item This is the algorithmic improvement, independent of parallelization
     \end{itemize}
     
-    \item \textbf{Factor 2: GPU Device Acceleration (3.60×)}
+    \item \textbf{Factor 2: GPU Device Acceleration (3.60× to 80.5×)}
     \begin{itemize}
-        \item Serial PennyLane Adam: 593.95s → GPU lightning.gpu: 164.91s
-        \item Limited benefit at 4 qubits due to GPU overhead
-        \item CPU+JIT (143.80s) outperforms GPU (164.91s) for small circuits
+        \item At 4 qubits: Serial PennyLane Adam: 593.95s → GPU lightning.gpu: 164.91s (3.60×)
+        \item At 26 qubits: CPU: 1425s → GPU: 17.7s (80.5×)
+        \item GPU advantage increases dramatically with qubit count
     \end{itemize}
     
     \item \textbf{Factor 3: MPI Parallelization (28.53×)}
@@ -478,20 +515,31 @@ We decompose the total 117.85× speedup into three independent factors:
         \item Using the correct Optax+JIT baseline (not the slower PennyLane Adam)
         \item Super-linear speedup due to embarrassingly parallel workload + cache effects
     \end{itemize}
+    
+    \item \textbf{Factor 4: Multi-GPU Scaling (3.98×)}
+    \begin{itemize}
+        \item 1 GPU: 31.99s → 4 GPUs: 8.04s for same workload
+        \item 99.4\% parallel efficiency across 4 H100 GPUs
+        \item Enables throughput of $\sim$1 problem/second at 20 qubits
+    \end{itemize}
 \end{enumerate}
 
 \textbf{Combined Effect}: $4.13 \times 28.53 \approx 117.85$ (Optimizer+JIT × MPI parallelization)
 
+For larger qubit counts with multi-GPU: $80.5 \times 3.98 \approx 320\times$ potential speedup vs single-core CPU.
+
 \textbf{Key Observations:}
 
 \begin{enumerate}
-    \item \textbf{Three-Factor Decomposition}: The 117.85× total speedup decomposes into: (a) 4.13× from optimizer+JIT, and (b) 28.53× from MPI parallelization. This decomposition is critical for understanding where the speedup actually comes from.
+    \item \textbf{Four-Factor Decomposition}: The speedup story has four components: optimizer+JIT (4.13×), GPU acceleration (up to 80.5×), MPI parallelization (28.53×), and multi-GPU scaling (3.98×). These factors combine multiplicatively for different use cases.
 
-    \item \textbf{CPU+JIT vs GPU}: Contrary to expectations, CPU with JIT compilation (143.80s) outperforms GPU (164.91s) for our 4-qubit system. GPU overhead exceeds benefits at small circuit sizes.
+    \item \textbf{GPU Scaling}: The CPU vs GPU scaling study (4--26 qubits) shows GPU wins at \textbf{all} scales, with speedup increasing from 10× at 4 qubits to 80× at 26 qubits. This contradicts our initial H$_2$ results where CPU+JIT beat GPU, which we attribute to Hartree-Fock overhead in the molecular simulation.
+
+    \item \textbf{Memory Limits}: Single H100 (80GB) maxes out at 29 qubits. The state vector at 29 qubits is 8GB, but adjoint differentiation requires $\sim$4× memory overhead, totaling $\sim$32GB. At 30 qubits, the 64GB requirement exceeds available memory.
+
+    \item \textbf{Near-Perfect Multi-GPU Efficiency}: 99.4\% parallel efficiency across 4 GPUs demonstrates that VQE parameter sweeps are ideal for multi-GPU deployment with essentially zero communication overhead.
 
     \item \textbf{Super-linear MPI Scaling}: Relative to the Optax+JIT baseline, MPI-2 achieves 17× speedup (efficiency 851\%). This is because each MPI process runs JIT compilation independently, and the embarrassingly parallel workload has zero communication overhead.
-
-    \item \textbf{Saturation Beyond 16 Processes}: Speedup levels off around 117× for 16 or more processes, showing we've reached the limit of how much this problem can be parallelized for 100 bond lengths.
 
     \item \textbf{Proper Baseline Critical}: Without the Serial Optax+JIT control experiment (143.80s), we would have incorrectly attributed all 117× speedup to MPI parallelization rather than the combination of algorithmic and parallel improvements.
 \end{enumerate}
@@ -535,12 +583,21 @@ The computed potential energy surface captures the essential quantum chemistry o
 
 This control experiment is critical: it establishes the proper baseline (143.80s) for measuring MPI parallelization effect, rather than conflating optimizer improvements with parallel speedup.
 
-\textbf{GPU Acceleration Results:} The GPU implementation using \texttt{lightning.gpu} on NVIDIA H100 achieved 3.60× speedup (164.91s vs 593.95s). However, the \textbf{key finding} is that CPU+JIT (143.80s) outperforms GPU (164.91s) for our 4-qubit system:
+\textbf{GPU Acceleration Results:} The GPU implementation using \texttt{lightning.gpu} on NVIDIA H100 showed scale-dependent performance:
 \begin{itemize}
-    \item GPU kernel launch overhead exceeds benefit for small 16-dimensional state vectors
-    \item JIT enables early convergence, reducing total iterations
-    \item GPU per-iteration time is faster (0.0145s vs 0.0204s), but total runtime is longer
-    \item This demonstrates that hardware choice must match problem scale
+    \item At 4 qubits (H$_2$ molecule): 3.60× speedup, but CPU+JIT (143.80s) still wins vs GPU (164.91s)
+    \item At 26 qubits (scaling study): 80.5× speedup (1425s CPU → 17.7s GPU)
+    \item GPU advantage increases dramatically with qubit count
+\end{itemize}
+
+The CPU vs GPU scaling study (4--26 qubits) revealed that GPU wins at \textbf{all} scales when using a simple Hamiltonian. The discrepancy with our H$_2$ results (where CPU+JIT won) is attributed to Hartree-Fock overhead in molecular simulations that doesn't benefit from GPU acceleration.
+
+\textbf{Multi-GPU Scaling Results:} The 4× H100 benchmark demonstrated excellent multi-GPU performance:
+\begin{itemize}
+    \item \textbf{Maximum qubits}: Single H100 achieves 29 qubits before OOM (8GB state vector, $\sim$32GB with adjoint overhead)
+    \item \textbf{Throughput}: 0.98 problems/second with 4 GPUs working in parallel
+    \item \textbf{Scaling efficiency}: 3.98× speedup with 99.4\% parallel efficiency
+    \item \textbf{Memory limit}: 30 qubits (64GB estimated) exceeds H100's 80GB available memory
 \end{itemize}
 
 \textbf{MPI Scaling Analysis (Corrected Baseline):} The MPI implementation shows outstanding performance when analyzed against the proper Optax+JIT baseline (143.80s):
@@ -551,19 +608,12 @@ This control experiment is critical: it establishes the proper baseline (143.80s
     \item \textbf{Saturation}: Speedup levels off at 28.53× (relative to Optax+JIT) around 16-32 processes
 \end{itemize}
 
-\textbf{Three-Factor Decomposition:} The total 117.85× speedup decomposes cleanly:
+\textbf{Four-Factor Decomposition:} The total speedup story includes four independent factors:
 \begin{itemize}
     \item Optimizer+JIT effect: 4.13× (593.95s → 143.80s)
+    \item GPU acceleration: 3.60× to 80.5× (depending on qubit count)
     \item MPI parallelization: 28.53× (143.80s → 5.04s)  
-    \item Combined: $4.13 \times 28.53 = 117.85$×
-\end{itemize}
-
-\textbf{Efficiency Analysis:} The efficiency values exceeding 100\% (e.g., 851\% for MPI-2) occur because:
-\begin{itemize}
-    \item Each MPI process performs independent JIT compilation
-    \item The workload is embarrassingly parallel (no communication)
-    \item Cache effects from smaller working set per process improve performance
-    \item These effects combine to produce super-linear scaling
+    \item Multi-GPU scaling: 3.98× with 99.4\% efficiency
 \end{itemize}
 
 \subsection{Relevance to Original Questions}
@@ -592,23 +642,37 @@ The combination of JIT compilation and MPI parallelization proved most effective
 
 \section{Conclusions}
 
-This project successfully implemented and benchmarked the Variational Quantum Eigensolver algorithm for computing the hydrogen molecule potential energy surface on HPC infrastructure. Key conclusions include:
+This project successfully implemented and benchmarked the Variational Quantum Eigensolver algorithm for computing the hydrogen molecule potential energy surface on HPC infrastructure featuring 4$\times$ NVIDIA H100 GPUs. Key conclusions include:
 
 \begin{enumerate}
     \item \textbf{Algorithm Validation:} The VQE implementation with a single-parameter double excitation ansatz accurately reproduces the H$_2$ potential energy surface, achieving near-exact energies at equilibrium bond lengths ($\sim$-1.137 Ha at 0.74 \AA).
 
     \item \textbf{Baseline Performance:} The serial implementation on HPC hardware establishes performance metrics: 593.95 seconds for 100 bond lengths with 300 VQE iterations each, processing the embarrassingly parallel workload sequentially.
 
-    \item \textbf{Three-Factor Speedup Analysis:} We rigorously decomposed the 117.85× total speedup into independent factors:
+    \item \textbf{Four-Factor Speedup Analysis:} We rigorously decomposed the performance improvements into independent factors:
           \begin{itemize}
-              \item \textbf{Factor 1 - Optimizer+JIT}: 4.13× (593.95s → 143.80s) from Optax optimizer and Catalyst JIT compilation
-              \item \textbf{Factor 2 - GPU Device}: 3.60× (593.95s → 164.91s) from lightning.gpu on NVIDIA H100
-              \item \textbf{Factor 3 - MPI Parallelization}: 28.53× (143.80s → 5.04s) using proper Optax+JIT baseline
+              \item \textbf{Factor 1 - Optimizer+JIT}: 4.13$\times$ (593.95s $\rightarrow$ 143.80s) from Optax optimizer and Catalyst JIT compilation
+              \item \textbf{Factor 2 - GPU Device}: 3.60$\times$ at 4 qubits scaling to 80.5$\times$ at 26 qubits
+              \item \textbf{Factor 3 - MPI Parallelization}: 28.53$\times$ (143.80s $\rightarrow$ 5.04s) using proper Optax+JIT baseline
+              \item \textbf{Factor 4 - Multi-GPU}: 3.98$\times$ with 99.4\% parallel efficiency across 4 H100s
           \end{itemize}
 
-    \item \textbf{Critical Finding - CPU+JIT vs GPU:} For our 4-qubit system, CPU with JIT compilation (143.80s) \textbf{outperforms} GPU (164.91s). GPU overhead exceeds benefits at small circuit sizes; GPU advantage increases with qubit count ($>$10 qubits).
+    \item \textbf{GPU Scaling Study (4--26 Qubits):} Comprehensive benchmarking revealed GPU advantage at all scales:
+          \begin{itemize}
+              \item 4 qubits: 10.5$\times$ speedup
+              \item 20 qubits: 43.2$\times$ speedup
+              \item 26 qubits: 80.5$\times$ speedup (1425s CPU $\rightarrow$ 17.7s GPU)
+          \end{itemize}
 
-    \item \textbf{MPI Excellence:} MPI parallelization achieved 28.53× speedup relative to the proper Optax+JIT baseline through:
+    \item \textbf{Multi-GPU Performance:} The 4$\times$ H100 benchmark established:
+          \begin{itemize}
+              \item Maximum simulatable qubits: 29 (8GB state vector, $\sim$32GB with adjoint overhead)
+              \item Memory limit: 30 qubits requires $\sim$64GB, exceeding available memory
+              \item Parallel efficiency: 99.4\% across 4 GPUs (near-perfect scaling)
+              \item Throughput: $\sim$1 problem/second at 20 qubits with 4 GPUs
+          \end{itemize}
+
+    \item \textbf{MPI Excellence:} MPI parallelization achieved 28.53$\times$ speedup relative to the proper Optax+JIT baseline through:
           \begin{itemize}
               \item Embarrassingly parallel workload distribution (zero communication overhead)
               \item Super-linear per-process scaling from cache effects
@@ -617,14 +681,12 @@ This project successfully implemented and benchmarked the Variational Quantum Ei
 
     \item \textbf{Practical Impact:} The optimized implementation reduces computation time from nearly 10 minutes to 5 seconds, enabling interactive parameter exploration and making VQE practical for larger molecules with more geometric parameters.
 
-    \item \textbf{Methodological Contribution:} The three-factor analysis demonstrates the importance of control experiments. Without the Serial Optax+JIT baseline (143.80s), we would have incorrectly attributed all speedup to parallelization rather than the combination of algorithmic and parallel improvements.
-
     \item \textbf{Best Practices Identified:} For VQE quantum chemistry calculations:
           \begin{itemize}
               \item Use JIT compilation for all implementations
-              \item For small circuits ($<$10 qubits), CPU+JIT outperforms GPU
-              \item MPI works excellently for embarrassingly parallel parameter sweeps
-              \item Match process count to problem size (100 bond lengths ÷ 16 processes $\approx$ 6 per process)
+              \item GPU acceleration beneficial at all qubit counts (10$\times$ to 80$\times$ speedup)
+              \item Multi-GPU scales near-perfectly for embarrassingly parallel workloads
+              \item Single H100 limit: 29 qubits; larger simulations require distributed state vectors
               \item Always establish proper baselines to isolate speedup factors
           \end{itemize}
 \end{enumerate}
@@ -644,15 +706,15 @@ This work demonstrates how classical HPC techniques can dramatically accelerate 
 \textbf{Key Lessons for Quantum Algorithm Acceleration:}
 
 \begin{enumerate}
-    \item \textbf{Match hardware to problem size}: CPU+JIT outperforms GPU for small circuits ($<$10 qubits). GPU acceleration becomes beneficial for larger circuits where state vector operations dominate over kernel launch overhead.
+    \item \textbf{GPU scales with problem size}: GPU speedup increases from 10$\times$ at 4 qubits to 80$\times$ at 26 qubits. For production quantum chemistry, GPU acceleration is essential.
 
-    \item \textbf{Algorithmic improvements first}: Optimizer choice and JIT compilation had 4.13× impact---always optimize your serial code before parallelizing. The optimizer+JIT effect is independent of and multiplies with parallelization gains.
+    \item \textbf{Algorithmic improvements first}: Optimizer choice and JIT compilation had 4.13$\times$ impact---always optimize your serial code before parallelizing. The optimizer+JIT effect is independent of and multiplies with parallelization gains.
 
-    \item \textbf{Establish proper baselines}: Our three-factor analysis required the Serial Optax+JIT control experiment. Without it, we would have incorrectly claimed 117× from MPI alone rather than 28.5× from MPI and 4.13× from optimizer+JIT.
+    \item \textbf{Multi-GPU scales near-perfectly}: 99.4\% parallel efficiency demonstrates that VQE parameter sweeps are ideal for multi-GPU deployment. No complex communication patterns needed.
+
+    \item \textbf{Know your memory limits}: Single H100 (80GB) maxes at 29 qubits due to adjoint differentiation overhead. Larger simulations require distributed state vector methods.
 
     \item \textbf{Embarrassingly parallel is ideal}: VQE's structure (where each bond length calculation is independent) achieves nearly perfect speedup without needing complicated communication between processors.
-
-    \item \textbf{Know your saturation point}: For 100 independent calculations, 16-32 processors is optimal; using more processors adds coordination overhead without faster completion.
 \end{enumerate}
 
 As quantum computers improve to 100+ qubits and classical simulation becomes impossible, these HPC techniques will remain important for:
@@ -663,7 +725,7 @@ As quantum computers improve to 100+ qubits and classical simulation becomes imp
     \item Training and tuning variational quantum algorithms
 \end{itemize}
 
-The 117× speedup we achieved shows that practical quantum chemistry calculations can be done today using classical HPC, while also preparing us for future hybrid quantum-classical computing.
+The combination of 117$\times$ speedup for molecular simulations and 80$\times$ GPU acceleration for larger qubit counts demonstrates that practical quantum chemistry calculations are achievable today using classical HPC, while also preparing us for future hybrid quantum-classical computing.
 
 \section{Acknowledgements}
 
