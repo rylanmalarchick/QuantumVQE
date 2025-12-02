@@ -2,7 +2,7 @@
 """
 Analyze Multi-GPU Benchmark Results
 
-Reads results/multi_gpu_benchmark.json and generates:
+Reads results/multi_gpu/multi_gpu_benchmark.json and generates:
 1. Max qubit scaling plot (time vs qubits, memory estimate)
 2. Multi-GPU throughput bar chart
 3. Scaling efficiency comparison (1 GPU vs 4 GPU)
@@ -18,7 +18,7 @@ import sys
 
 def main():
     # Check for results file
-    results_file = 'results/multi_gpu_benchmark.json'
+    results_file = 'results/multi_gpu/multi_gpu_benchmark.json'
     if not os.path.exists(results_file):
         print(f"ERROR: {results_file} not found!")
         print("Run the benchmark first: qsub pbs_scripts/run_comprehensive_gpu_benchmark.sh")
