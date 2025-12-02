@@ -36,7 +36,8 @@ nvidia-smi --query-gpu=name,memory.total --format=csv 2>/dev/null || echo "nvidi
 echo "========================================"
 
 # Run 1 process per node (2 nodes = 2 ranks)
-mpiexec -n 2 python src/scaling_study/multi_node_smoke_test.py
+# Use hostfile to ensure distribution across nodes
+mpiexec -n 2 -hostfile $PBS_NODEFILE -npernode 1 python src/scaling_study/multi_node_smoke_test.py
 
 echo "========================================"
 echo "Smoke test complete"
