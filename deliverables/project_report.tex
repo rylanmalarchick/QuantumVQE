@@ -454,6 +454,8 @@ To understand the crossover between CPU and GPU performance, we conducted a comp
 
 \textbf{Key Finding}: Contrary to our initial 4-qubit H$_2$ results, GPU wins at \textbf{all} qubit counts in this scaling study. The difference is that the scaling study uses a simpler Hamiltonian (sum of Pauli-Z operators) without the Hartree-Fock overhead present in the molecular simulation. The GPU speedup increases from 10$\times$ at 4 qubits to over 80$\times$ at 24--26 qubits, demonstrating the importance of GPU acceleration for larger quantum simulations.
 
+\textbf{Methodological Note:} The scaling study uses a synthetic transverse-field Ising Hamiltonian rather than molecular Hamiltonians generated via Hartree-Fock. This isolates the computational cost of the VQE optimization algorithm itself from the overhead of quantum chemistry integral generation, allowing direct measurement of GPU acceleration as a function of qubit count. The qubit counts tested (4--26) correspond to state vector sizes that would be required for progressively larger molecular systems with expanded basis sets.
+
 \textbf{Implementation Note:} The GPU scaling study utilized PennyLane's native Adam optimizer rather than Optax due to compatibility constraints between Optax and the autograd interface required by \texttt{lightning.gpu} with adjoint differentiation. This ensures consistent gradient computation across all qubit counts in the benchmark.
 
 Figure~\ref{fig:scaling_study} shows the scaling comparison.
