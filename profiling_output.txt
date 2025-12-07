@@ -1,0 +1,80 @@
+============================================================
+FULL RUN - Serial VQE Code for H2 Molecule
+============================================================
+Bond lengths to scan: 10
+VQE iterations per bond length: 50
+Total circuit evaluations: 500
+============================================================
+
+[1/10] Calculating energy for bond length: 0.35 Angstrom
+    Final energy: -0.789268 Ha
+    Time: 3.27 seconds
+
+[2/10] Calculating energy for bond length: 0.64 Angstrom
+    Final energy: -1.128794 Ha
+    Time: 2.79 seconds
+
+[3/10] Calculating energy for bond length: 0.94 Angstrom
+    Final energy: -1.113408 Ha
+    Time: 3.09 seconds
+
+[4/10] Calculating energy for bond length: 1.23 Angstrom
+    Final energy: -1.047692 Ha
+    Time: 3.55 seconds
+
+[5/10] Calculating energy for bond length: 1.53 Angstrom
+    Final energy: -0.979180 Ha
+    Time: 3.15 seconds
+
+[6/10] Calculating energy for bond length: 1.82 Angstrom
+    Final energy: -0.919644 Ha
+    Time: 3.24 seconds
+
+[7/10] Calculating energy for bond length: 2.12 Angstrom
+    Final energy: -0.872630 Ha
+    Time: 3.49 seconds
+
+[8/10] Calculating energy for bond length: 2.41 Angstrom
+    Final energy: -0.837626 Ha
+    Time: 2.99 seconds
+
+[9/10] Calculating energy for bond length: 2.71 Angstrom
+    Final energy: -0.812459 Ha
+    Time: 3.65 seconds
+
+[10/10] Calculating energy for bond length: 3.00 Angstrom
+    Final energy: -0.794796 Ha
+    Time: 3.44 seconds
+
+============================================================
+Scan complete. Plotting results...
+Plot saved as: vqe_results.png
+
+============================================================
+BASELINE PERFORMANCE METRICS - SERIAL CODE
+============================================================
+Total runtime: 32.66 seconds (0.54 minutes)
+Avg time per bond length: 3.27 seconds
+Avg time per VQE iteration: 0.0653 seconds
+Circuit evaluations per second: 15.31
+============================================================
+         10761444 function calls (10284953 primitive calls) in 60.631 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+      300    0.017    0.000  118.117    0.394 __init__.py:1(<module>)
+     16/4    0.233    0.015   60.162   15.040 backend_agg.py:206(get_text_width_height_descent)
+    146/2    0.003    0.000   59.949   29.975 text.py:926(get_window_extent)
+    176/2    0.012    0.000   33.030   16.515 text.py:358(_get_layout)
+      500    0.004    0.000   28.184    0.056 gradient_descent.py:44(step_and_cost)
+      510    0.003    0.000   28.166    0.055 qnode.py:890(__call__)
+      510    0.019    0.000   28.162    0.055 qnode.py:861(_impl_call)
+      500    0.007    0.000   28.113    0.056 gradient_descent.py:102(compute_grad)
+      500    0.004    0.000   28.089    0.056 _grad.py:304(__call__)
+      500    0.007    0.000   28.035    0.056 wrap_util.py:9(nary_f)
+      500    0.007    0.000   28.016    0.056 _grad.py:330(_grad_with_forward)
+      500    0.003    0.000   27.614    0.055 core.py:10(make_vjp)
+      500    0.006    0.000   27.607    0.055 tracer.py:9(trace)
+      500    0.003    0.000   27.584    0.055 wrap_util.py:11(unary_f)
+3936/1162    0.043    0.000   27.048    0.023 <frozen importlib._bootstrap>:1349(_find_and_load)
