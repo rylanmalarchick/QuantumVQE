@@ -48,7 +48,7 @@ echo "Running vqe_gpu.py (lightning.gpu)"
 echo "============================================"
 
 # Run the TRUE GPU code (lightning.gpu device)
-python src/vqe_gpu.py
+python src/main_study/vqe_gpu.py
 
 echo "============================================"
 echo "End time: $(date)"

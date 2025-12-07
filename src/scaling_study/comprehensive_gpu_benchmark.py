@@ -332,8 +332,8 @@ def main():
         print(f"3. 4-GPU speedup: {results['scaling_test'].get('speedup', 'N/A'):.2f}x ({results['scaling_test'].get('efficiency_percent', 'N/A'):.1f}% efficiency)")
         
         # Save to file
-        output_path = 'results/multi_gpu_benchmark.json'
-        os.makedirs('results', exist_ok=True)
+        output_path = 'results/multi_gpu/multi_gpu_benchmark.json'
+        os.makedirs('results/multi_gpu', exist_ok=True)
         with open(output_path, 'w') as f:
             json.dump(results, f, indent=2, default=str)
         print(f"\nResults saved to: {output_path}")

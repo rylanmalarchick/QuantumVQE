@@ -40,7 +40,7 @@ echo "JAX_PLATFORMS: $JAX_PLATFORMS"
 echo "============================================"
 
 # Run the serial Optax+JIT code
-python src/vqe_serial_optax.py
+python src/main_study/vqe_serial_optax.py
 
 echo "============================================"
 echo "End time: $(date)"

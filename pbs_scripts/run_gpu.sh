@@ -32,7 +32,7 @@ export CUDA_VISIBLE_DEVICES=0
 export XLA_PYTHON_CLIENT_PREALLOCATE=false
 
 # Run the JIT+GPU code
-python src/vqe_qjit.py
+python src/main_study/vqe_qjit.py
 
 echo "============================================"
 echo "End time: $(date)"

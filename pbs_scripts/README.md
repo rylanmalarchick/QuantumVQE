@@ -8,7 +8,7 @@ This directory contains PBS job scripts for running VQE benchmarks on the HPC cl
 ```bash
 qsub pbs_scripts/run_serial.sh
 ```
-- Runs `src/main.py` on a single CPU core
+- Runs `src/main_study/main.py` on a single CPU core
 - Baseline performance metric
 - Output: `logs/serial_output.log`
 
@@ -16,7 +16,7 @@ qsub pbs_scripts/run_serial.sh
 ```bash
 qsub pbs_scripts/run_gpu.sh
 ```
-- Runs `src/vqe_qjit.py` with GPU acceleration
+- Runs `src/main_study/vqe_qjit.py` with GPU acceleration
 - Uses Catalyst JIT compilation + CUDA
 - Requires: 1 GPU node
 - Output: `logs/gpu_output.log`
@@ -50,17 +50,16 @@ Edit the `#PBS -M` line in each script to use your email address.
 3. **Test locally first:**
 ```bash
 # Activate environment
-eval "$(./bin/micromamba shell hook --shell bash)"
-micromamba activate vqe-gpu
+conda activate vqe-gpu
 
 # Test serial version
-python src/main.py
+python src/main_study/main.py
 
 # Test GPU version (on GPU node)
-python src/vqe_qjit.py
+python src/main_study/vqe_qjit.py
 
 # Test MPI version (on compute node)
-mpiexec -n 4 python src/vqe_mpi.py
+mpiexec -n 4 python src/main_study/vqe_mpi.py
 ```
 
 ## Monitoring Jobs
