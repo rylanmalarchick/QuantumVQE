@@ -161,9 +161,9 @@ where $f$ is the VQE optimization procedure. This enables straightforward parall
 
 \textbf{Phase 3: Distributed-Memory Parallelism}
 \begin{itemize}
-\item Use Ray for task-based distribution across cluster nodes
-\item Each node computes subset of bond lengths
-\item Expected speedup: Linear up to $p = 40$ nodes
+\item Use MPI for distributed computing across cluster nodes
+\item Each process computes subset of bond lengths via scatter-gather
+\item Expected speedup: Linear up to $p = 100$ processes (one per bond length)
 \end{itemize}
 
 \subsection{Performance Model}

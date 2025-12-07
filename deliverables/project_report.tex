@@ -205,11 +205,11 @@ The baseline serial implementation follows Algorithm~\ref{alg:serial}.
 
 \textbf{Implementation Details:}
 \begin{itemize}
-    \item \textbf{Framework}: PennyLane 0.43.1 with Lightning device (CPU simulator)
+    \item \textbf{Software Versions}: Python 3.12, PennyLane 0.43.1, PennyLane-Catalyst 0.13.0, JAX 0.6.2, Optax 0.2.6, CUDA 11.8, OpenMPI 4.x
     \item \textbf{Basis Set}: STO-3G minimal basis (4 spin-orbitals $\rightarrow$ 4 qubits)
     \item \textbf{Hamiltonian Method}: DHF (built-in Hartree-Fock solver)
-    \item \textbf{Device}: PennyLane Lightning simulator (optimized CPU backend)
-    \item \textbf{Gradient Method}: Automatic differentiation via PennyLane
+    \item \textbf{Device}: PennyLane Lightning simulator (CPU: \texttt{lightning.qubit}, GPU: \texttt{lightning.gpu})
+    \item \textbf{Gradient Method}: Automatic differentiation via PennyLane/Catalyst
 \end{itemize}
 
 \subsection{Computational Complexity}
@@ -283,25 +283,21 @@ Data is then gathered with $com.gather()$.
 
 \textbf{Expected Speedup}: $0.8p$ for $p$ cores (slightly less than ideal due to communication overhead and individual JIT compilation time)
 
-\subsubsection{Phase 3: Distributed-Memory Parallelism with Ray}
+\subsubsection{Phase 3: Why MPI Over Ray}
 
-\textbf{Method}: Use Ray distributed computing framework to scale across HPC cluster nodes.
+We initially considered the Ray distributed computing framework for multi-node parallelization due to its high-level task-based API. However, during development we encountered persistent dependency conflicts between Ray and the PennyLane/Catalyst/JAX ecosystem. The Ray pip package repeatedly failed to install alongside PennyLane-Catalyst due to incompatible transitive dependencies, and attempts to resolve version constraints proved time-consuming without success.
 
-\textbf{Implementation Strategy}:
-\begin{verbatim}
-import ray
+Given these practical constraints, we selected MPI (via \texttt{mpi4py}) as our distributed-memory solution. MPI offered several advantages for our use case:
+\begin{itemize}
+    \item \textbf{Mature HPC integration}: Native support on the ERAU Vega cluster with optimized OpenMPI
+    \item \textbf{Minimal overhead}: Direct scatter-gather communication patterns with no daemon processes
+    \item \textbf{Proven compatibility}: No conflicts with PennyLane, Catalyst, or JAX packages
+    \item \textbf{Static workload fit}: Our embarrassingly parallel workload (fixed bond lengths) does not require Ray's dynamic task scheduling
+\end{itemize}
 
-@ray.remote
-def compute_energy_remote(bond_length):
-    # VQE optimization on remote worker
-    return energy
+The MPI implementation uses the same JIT-compiled VQE runner as Phase 1, with each MPI rank independently compiling and executing its assigned subset of bond lengths. Results are gathered to the root process for aggregation and plotting.
 
-ray.init(address='auto')  # Connect to cluster
-futures = [compute_energy_remote.remote(d) for d in bond_lengths]
-energies = ray.get(futures)
-\end{verbatim}
-
-\textbf{Expected Speedup}: Near-linear scaling up to $p = 40$ nodes (one per bond length)
+\textbf{Expected Speedup}: Near-linear scaling for $p \leq N_b$ processes, where $N_b = 100$ is the number of bond lengths
 
 \subsection{Performance Prediction Model}
 
@@ -458,6 +454,8 @@ To understand the crossover between CPU and GPU performance, we conducted a comp
 
 \textbf{Key Finding}: Contrary to our initial 4-qubit H$_2$ results, GPU wins at \textbf{all} qubit counts in this scaling study. The difference is that the scaling study uses a simpler Hamiltonian (sum of Pauli-Z operators) without the Hartree-Fock overhead present in the molecular simulation. The GPU speedup increases from 10$\times$ at 4 qubits to over 80$\times$ at 24--26 qubits, demonstrating the importance of GPU acceleration for larger quantum simulations.
 
+\textbf{Implementation Note:} The GPU scaling study utilized PennyLane's native Adam optimizer rather than Optax due to compatibility constraints between Optax and the autograd interface required by \texttt{lightning.gpu} with adjoint differentiation. This ensures consistent gradient computation across all qubit counts in the benchmark.
+
 Figure~\ref{fig:scaling_study} shows the scaling comparison.
 
 \begin{figure}[h]
@@ -535,7 +533,7 @@ For larger qubit counts with multi-GPU: $80.5 \times 3.98 \approx 320\times$ pot
 
     \item \textbf{GPU Scaling}: The CPU vs GPU scaling study (4--26 qubits) shows GPU wins at \textbf{all} scales, with speedup increasing from 10× at 4 qubits to 80× at 26 qubits. This contradicts our initial H$_2$ results where CPU+JIT beat GPU, which we attribute to Hartree-Fock overhead in the molecular simulation.
 
-    \item \textbf{Memory Limits}: Single H100 (80GB) maxes out at 29 qubits. The state vector at 29 qubits is 8GB, but adjoint differentiation requires $\sim$4× memory overhead, totaling $\sim$32GB. At 30 qubits, the 64GB requirement exceeds available memory.
+    \item \textbf{Memory Limits}: Single H100 (80GB) maxes out at 29 qubits. The state vector size grows as $2^N \times 16$ bytes (complex128 amplitudes): at 26 qubits this is 1 GB, at 29 qubits 8 GB. Adjoint differentiation requires $\sim$4$\times$ memory overhead for intermediate states, totaling $\sim$32GB at 29 qubits. While the H100's HBM3 memory (3.35 TB/s bandwidth) can transfer a 1 GB state vector in $\sim$0.3 ms, the repeated matrix-vector multiplications for gradient computation saturate compute resources before memory bandwidth becomes the limiting factor. At 30 qubits, the $\sim$64GB memory requirement exceeds available VRAM.
 
     \item \textbf{Near-Perfect Multi-GPU Efficiency}: 99.4\% parallel efficiency across 4 GPUs demonstrates that VQE parameter sweeps are ideal for multi-GPU deployment with essentially zero communication overhead.
 
@@ -571,7 +569,7 @@ The computed potential energy surface captures the essential quantum chemistry o
 
 \textbf{Serial Baseline:} The serial implementation achieves 157.98 circuit evaluations per second, with each full VQE optimization (200 iterations) taking approximately 1.27 seconds in our initial benchmarks. However, on the HPC cluster with 100 bond lengths and 300 iterations, the serial runtime increased to 593.95 seconds (9.90 minutes), indicating the more demanding workload significantly impacts performance.
 
-\textbf{Bottleneck Identification:} Analysis shows that more than 95\% of runtime is spent in the VQE optimization loops (running quantum circuits and computing gradients), with very little time spent on other tasks like generating the Hamiltonian or writing output files. This high fraction of parallelizable work ($f_p \approx 0.95$) is ideal for getting good speedups from parallelization.
+\textbf{Bottleneck Identification:} Performance profiling via Python's \texttt{cProfile} confirmed that VQE optimization dominates runtime. The profiler showed that gradient computation (\texttt{\_grad\_with\_forward}) and cost function evaluation (\texttt{qnode.\_\_call\_\_}) together account for 28.2 seconds of the 32.7 second computation time (86\%), with the remaining time split between Hamiltonian generation and result plotting. Excluding I/O and visualization overhead, more than 95\% of computational work occurs in the VQE optimization loops. This high fraction of parallelizable work ($f_p \approx 0.95$) is ideal for achieving strong speedups from parallelization.
 
 \textbf{JIT Compilation Performance:} The Serial Optax+JIT implementation achieved 4.13× speedup (143.80s vs 593.95s). This improvement comes from:
 \begin{itemize}
