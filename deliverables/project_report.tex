@@ -9,9 +9,6 @@
 \usepackage{hyperref}
 \usepackage{xcolor}
 
-% Command to mark sections that need additional analysis
-\newcommand{\needsanalysis}[1]{\textcolor{blue}{[FOR DISCUSSION: #1]}}
-
 \title{Parallelizing the Variational Quantum Eigensolver: \\
 High Performance Computing for Molecular Ground State Energy}
 
@@ -72,8 +69,8 @@ This continuous-space Hamiltonian must be converted to a finite basis set (we us
 The specific computational problem is:
 
 \begin{itemize}
-    \item \textbf{Input}: Set of bond lengths $\{d_1, \ldots, d_{40}\}$ uniformly spaced from 0.1 to 3.0 \AA
-    \item \textbf{Output}: Ground state energies $\{E_1, \ldots, E_{40}\}$ at each bond length
+    \item \textbf{Input}: Set of bond lengths $\{d_1, \ldots, d_{100}\}$ uniformly spaced from 0.1 to 3.0 \AA
+    \item \textbf{Output}: Ground state energies $\{E_1, \ldots, E_{100}\}$ at each bond length
     \item \textbf{Constraint}: Each energy must converge to sufficient accuracy (200 VQE iterations)
     \item \textbf{Objective}: Minimize total wall-clock time while maintaining accuracy
 \end{itemize}
@@ -157,7 +154,7 @@ We use the Adam optimizer with:
 
 \subsection{Problem Structure and Parallelization Opportunities}
 
-The computational task consists of computing the potential energy surface by evaluating $E(\theta^*)$ for $N_b = 40$ bond lengths in the range $[0.1, 3.0]$ \AA. For each bond length $d_i$:
+The computational task consists of computing the potential energy surface by evaluating $E(\theta^*)$ for $N_b = 100$ bond lengths in the range $[0.1, 3.0]$ \AA. For each bond length $d_i$:
 
 \begin{enumerate}
     \item Generate molecular Hamiltonian $H(d_i)$ using Hartree-Fock
@@ -169,7 +166,7 @@ The computational task consists of computing the potential energy surface by eva
 The key insight is that these calculations are \textbf{embarrassingly parallel}---each bond length calculation is completely independent and doesn't need data from other calculations:
 
 \begin{equation}
-    E_i = f(d_i) \quad \text{for } i = 1, \ldots, 40
+    E_i = f(d_i) \quad \text{for } i = 1, \ldots, 100
 \end{equation}
 
 where $f$ is the VQE optimization procedure.
@@ -182,13 +179,13 @@ The baseline serial implementation follows Algorithm~\ref{alg:serial}.
     \caption{Serial VQE for H$_2$ Potential Energy Surface}
     \label{alg:serial}
     \begin{algorithmic}[1]
-        \State \textbf{Input:} Bond lengths $\{d_1, \ldots, d_{40}\}$
-        \State \textbf{Output:} Energies $\{E_1, \ldots, E_{40}\}$
+        \State \textbf{Input:} Bond lengths $\{d_1, \ldots, d_{100}\}$
+        \State \textbf{Output:} Energies $\{E_1, \ldots, E_{100}\}$
         \State
         \State Initialize quantum device: \texttt{lightning.qubit} with 4 qubits
         \State Define ansatz with Hartree-Fock initialization
         \State
-        \For{$i = 1$ to $40$}
+        \For{$i = 1$ to $100$}
         \State Generate $H(d_i)$ using Hartree-Fock (STO-3G basis)
         \State $\theta \gets 0$
         \State Initialize Adam optimizer with $\alpha = 0.01$
@@ -199,7 +196,7 @@ The baseline serial implementation follows Algorithm~\ref{alg:serial}.
         \EndFor
         \State $E_i \gets E(\theta)$ \Comment{Store converged energy}
         \EndFor
-        \State \Return $\{E_1, \ldots, E_{40}\}$
+        \State \Return $\{E_1, \ldots, E_{100}\}$
     \end{algorithmic}
 \end{algorithm}
 
@@ -335,7 +332,7 @@ Predicted speedups are shown in Table~\ref{tab:predictions}.
 
 \subsection{Serial Implementation Results}
 
-The serial VQE implementation successfully computed the H$_2$ potential energy surface across 40 bond lengths. Performance metrics are shown in Table~\ref{tab:serial_performance}.
+The serial VQE implementation successfully computed the H$_2$ potential energy surface across 100 bond lengths. Performance metrics are shown in Table~\ref{tab:serial_performance}.
 
 \begin{table}[h]
     \centering
@@ -372,7 +369,7 @@ Figure~\ref{fig:serial_pes} shows the computed potential energy surface.
 
 \subsection{Parallel Implementation Results}
 
-We implemented and benchmarked parallelization strategies on the ERAU Vega HPC cluster featuring AMD EPYC 9654 96-Core processors (192 cores total) with 8 NVIDIA GPUs. GPU infrastructure has been configured but benchmarks focus on CPU-based JIT compilation and MPI parallelization. All implementations used 100 bond lengths with 300 VQE iterations per bond length for consistency.
+We implemented and benchmarked parallelization strategies on the ERAU Vega HPC cluster featuring AMD EPYC 9654 96-Core processors (192 cores total) with 4 NVIDIA H100 GPUs. GPU infrastructure has been configured but benchmarks focus on CPU-based JIT compilation and MPI parallelization. All implementations used 100 bond lengths with 300 VQE iterations per bond length for consistency.
 
 \subsubsection{Hardware Platform}
 
