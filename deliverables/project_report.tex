@@ -136,7 +136,7 @@ The double excitation gate is:
     U(\theta) = \exp\left(-i\frac{\theta}{2}(a_0^\dagger a_1^\dagger a_2 a_3 - a_3^\dagger a_2^\dagger a_1 a_0)\right)
 \end{equation}
 
-This ansatz captures the most important electron correlation effects in H$_2$ (both electrons moving together from bonding to antibonding orbitals) while only needing a single adjustable parameter $\theta$.
+This ansatz captures the most important electron correlation effects in H$_2$ (both electrons moving together from bonding to antibonding orbitals) while only needing a single adjustable parameter $\theta$. From a computational perspective, this gate is a parameterized unitary matrix applied to the $2^N$-dimensional state vector. The optimization problem reduces to finding the parameter $\theta$ that minimizes a matrix expectation value---a task well-suited to gradient-based optimization and GPU acceleration.
 
 \subsection{Optimization Problem}
 
@@ -566,6 +566,8 @@ The computed potential energy surface captures the essential quantum chemistry o
 \textbf{Dissociation Behavior:} As bond length increases beyond 2.5 \AA, the energy approaches the limit where the two hydrogen atoms are separated. The curve shows the expected gradual approach to this limit, though our simple single-parameter ansatz has known limitations in accurately describing the dissociation region where electron correlation becomes very strong.
 
 \textbf{Ansatz Effectiveness:} The double excitation ansatz with a single parameter works remarkably well for H$_2$ near equilibrium. This is because the most important correlation effect is both electrons moving together from the bonding ($\sigma$) to antibonding ($\sigma^*$) orbital, which is exactly what the double excitation operator captures.
+
+\textbf{HPC Focus:} While the physical interpretation above validates the correctness of our VQE implementation, the primary contribution of this work is the HPC parallelization strategy. The quantum chemistry serves as a representative scientific workload; the parallelization techniques (JIT compilation, GPU acceleration, MPI distribution) apply broadly to other variational quantum algorithms.
 
 \subsection{Computational Performance Analysis}
 
