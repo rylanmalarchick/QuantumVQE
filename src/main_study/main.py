@@ -56,6 +56,11 @@ def main():
     print(f"VQE iterations per bond length: {MAX_STEPS}")
     print(f"Total circuit evaluations: {len(bond_lengths) * MAX_STEPS}")
     print("="*60)
+
+    if MAX_STEPS < CONVERGENCE_MIN_STEPS:
+        print(f"WARNING: MAX_STEPS={MAX_STEPS} is below the "
+              f"{CONVERGENCE_MIN_STEPS}-step convergence floor; "
+              f"reported energies may not be converged to FCI.")
     
     start_time = time.time()
     

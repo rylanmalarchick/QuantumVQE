@@ -1,7 +1,8 @@
 SYMBOLS = ["H", "H"]
 ELECTRONS = 2
 QUBITS = 4
-MAX_STEPS = 300 
+MAX_STEPS = 300
+CONVERGENCE_MIN_STEPS = 50  # inner VQE loop may not reach FCI below this
 STEP_SIZE = 0.05
 
 START_DIST = 0.35

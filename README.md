@@ -104,6 +104,12 @@ python src/main_study/vqe_gpu.py
 mpirun -np 4 python src/main_study/vqe_mpi.py
 ```
 
+### Reproducibility
+
+The serial study starts every optimization from zero-initialized parameters (`np.zeros`) on PennyLane Lightning's analytic backend, so there is no random number generator to seed. Repeated runs of the same configuration agree to within floating-point reduction order (~1e-6 Ha), set by the BLAS/OpenMP thread count rather than any RNG; fix the thread count (e.g. `OMP_NUM_THREADS=1`) for bit-identical results.
+
+Convergence to FCI requires roughly 50 optimization steps. `main.py` prints a warning when `MAX_STEPS` is set below this floor (`CONVERGENCE_MIN_STEPS` in `vqe_params.py`); the energy returned at smaller budgets is meaningful but not converged.
+
 ### HPC Cluster Execution
 
 Submit jobs using PBS scheduler:
