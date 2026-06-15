@@ -65,15 +65,15 @@ This work addresses two primary questions:
     \item \textbf{High Performance Computing}: How effectively can the VQE algorithm be parallelized to reduce computational time, and what speedups can be achieved through JIT compilation, multiprocessing, and distributed computing on HPC clusters?
 \end{enumerate}
 
-The serial implementation provides a performance baseline, while the parallel implementations demonstrate excellent scaling behavior and efficiency gains relevant to larger quantum chemistry calculations.
+The serial implementation provides a baseline, and the parallel versions show good scaling up to 32 processes.
 
 \subsection{Related Work}
 
-The VQE algorithm was first demonstrated experimentally by Peruzzo et al.~\cite{peruzzo2014} on a photonic quantum processor, establishing it as a leading candidate for near-term quantum advantage in chemistry. Subsequent work has focused on ansatz design, with the Unitary Coupled Cluster (UCC) ansatz~\cite{romero2018} becoming standard for molecular simulations, and hardware-efficient ansatzes~\cite{kandala2017} reducing circuit depth for noisy devices.
+Peruzzo et al.~\cite{peruzzo2014} first demonstrated VQE experimentally on a photonic quantum processor. Since then, ansatz design has been a major focus: the Unitary Coupled Cluster (UCC) ansatz~\cite{romero2018} is now standard for molecular simulations, while hardware-efficient ansatzes~\cite{kandala2017} reduce circuit depth on noisy devices.
 
-Classical simulation of variational quantum algorithms has benefited substantially from GPU acceleration. The PennyLane framework~\cite{bergholm2018} provides a unified interface for quantum computing with support for automatic differentiation, while its Lightning backend~\cite{pennylane_lightning} offers optimized state-vector simulation. NVIDIA's cuQuantum library~\cite{cuquantum2023} enables multi-GPU quantum circuit simulation at scale, and JAX~\cite{jax2018} provides just-in-time compilation for high-performance numerical computing.
+On the classical simulation side, several tools have emerged for accelerating variational quantum algorithms. PennyLane~\cite{bergholm2018} provides automatic differentiation for quantum circuits, and its Lightning backend~\cite{pennylane_lightning} offers optimized state-vector simulation. NVIDIA's cuQuantum~\cite{cuquantum2023} targets multi-GPU simulation, and JAX~\cite{jax2018} enables JIT compilation for numerical code.
 
-MPI-based parallelization of quantum chemistry workloads is well-established in classical computing~\cite{valiev2010}, and similar approaches have been applied to variational quantum algorithms for parameter sweeps and ensemble calculations. Our work contributes a systematic benchmark of these acceleration techniques specifically for VQE on modern GPU clusters.
+MPI parallelization of quantum chemistry is well-established~\cite{valiev2010}. We apply similar ideas to VQE, benchmarking JIT compilation, GPU acceleration, and MPI distribution on modern hardware. Our contribution is a systematic comparison of these techniques on a single HPC node with multiple GPUs.
 
 \section{Problem Description}
 
@@ -158,7 +158,7 @@ The double excitation gate is:
     U(\theta) = \exp\left(-i\frac{\theta}{2}(a_0^\dagger a_1^\dagger a_2 a_3 - a_3^\dagger a_2^\dagger a_1 a_0)\right)
 \end{equation}
 
-This ansatz captures the most important electron correlation effects in H$_2$ (both electrons moving together from bonding to antibonding orbitals) while only needing a single adjustable parameter $\theta$. From a computational perspective, this gate is a parameterized unitary matrix applied to the $2^N$-dimensional state vector. The optimization problem reduces to finding the parameter $\theta$ that minimizes a matrix expectation value---a task well-suited to gradient-based optimization and GPU acceleration.
+This ansatz captures the most important electron correlation effects in H$_2$ (both electrons moving together from bonding to antibonding orbitals) while only needing a single adjustable parameter $\theta$. From a computational perspective, this gate is a parameterized unitary matrix applied to the $2^N$-dimensional state vector. The optimization problem reduces to finding the parameter $\theta$ that minimizes a matrix expectation value, which maps naturally to gradient-based optimization.
 
 \subsection{Optimization Problem}
 
@@ -188,7 +188,7 @@ The computational task consists of computing the potential energy surface by eva
     \item Store ground state energy $E_i = E(\theta^*_i)$
 \end{enumerate}
 
-The key insight is that these calculations are \textbf{embarrassingly parallel}---each bond length calculation is completely independent and doesn't need data from other calculations:
+These calculations are \textbf{embarrassingly parallel}: each bond length calculation is independent, requiring no data from other calculations:
 
 \begin{equation}
     E_i = f(d_i) \quad \text{for } i = 1, \ldots, 100
@@ -421,7 +421,7 @@ We implemented JIT compilation using Catalyst with the Optax optimizer on CPU (\
     \item \textbf{Device}: \texttt{lightning.qubit} (CPU backend)
 \end{itemize}
 
-This implementation serves as the \textbf{critical control experiment} that isolates the optimizer+JIT effect from parallelization. The 4.13× speedup demonstrates the significant benefit of JIT compilation and the more efficient Optax optimizer compared to PennyLane's built-in AdamOptimizer.
+This implementation is the control experiment that isolates the optimizer+JIT effect from parallelization. The 4.13× speedup shows the benefit of JIT compilation and the Optax optimizer over PennyLane's built-in AdamOptimizer.
 
 \subsubsection{Implementation 3: GPU Acceleration}
 
@@ -468,7 +468,7 @@ To understand the crossover between CPU and GPU performance, we conducted a comp
     \label{tab:gpu_scaling}
 \end{table}
 
-\textbf{Key Finding}: Contrary to our initial 4-qubit H$_2$ results, GPU wins at \textbf{all} qubit counts in this scaling study. The difference is that the scaling study uses a simpler Hamiltonian (sum of Pauli-Z operators) without the Hartree-Fock overhead present in the molecular simulation. The GPU speedup increases from 10$\times$ at 4 qubits to over 80$\times$ at 24--26 qubits, demonstrating the importance of GPU acceleration for larger quantum simulations.
+\textbf{Key Finding}: Contrary to our initial 4-qubit H$_2$ results, GPU wins at \textbf{all} qubit counts in this scaling study. The difference is that the scaling study uses a simpler Hamiltonian (sum of Pauli-Z operators) without the Hartree-Fock overhead present in the molecular simulation. The GPU speedup increases from 10$\times$ at 4 qubits to over 80$\times$ at 24--26 qubits.
 
 \textbf{Methodological Note:} The scaling study uses a synthetic transverse-field Ising Hamiltonian rather than molecular Hamiltonians generated via Hartree-Fock. This isolates the computational cost of the VQE optimization algorithm itself from the overhead of quantum chemistry integral generation, allowing direct measurement of GPU acceleration as a function of qubit count. The qubit counts tested (4--26) correspond to state vector sizes that would be required for progressively larger molecular systems with expanded basis sets.
 
@@ -584,63 +584,62 @@ Figure~\ref{fig:multi_gpu} summarizes the multi-GPU benchmark results.
 
 The computed potential energy surface captures the essential quantum chemistry of the H$_2$ molecule:
 
-\textbf{Equilibrium Geometry:} The minimum energy occurs near $d_{\text{eq}} \approx 0.74$ \AA, which matches the experimental bond length of 0.741 \AA\ for ground state H$_2$. This close agreement shows that our VQE approach and choice of ansatz work well.
+\textbf{Equilibrium Geometry:} The minimum energy occurs near $d_{\text{eq}} \approx 0.74$ \AA, matching the experimental value of 0.741 \AA.
 
-\textbf{Bonding Energy:} At equilibrium, the VQE energy is approximately $E_{\text{eq}} \approx -1.137$ Hartree (from the plotted curve). The exact energy for H$_2$ in the STO-3G basis is $-1.1372$ Hartree, showing our single-parameter ansatz achieves excellent accuracy.
+\textbf{Bonding Energy:} At equilibrium, the VQE energy is approximately $-1.137$ Hartree. The exact STO-3G value is $-1.1372$ Hartree, so our single-parameter ansatz achieves good accuracy.
 
-\textbf{Dissociation Behavior:} As bond length increases beyond 2.5 \AA, the energy approaches the limit where the two hydrogen atoms are separated. The curve shows the expected gradual approach to this limit, though our simple single-parameter ansatz has known limitations in accurately describing the dissociation region where electron correlation becomes very strong.
+\textbf{Dissociation Behavior:} Beyond 2.5 \AA, the energy approaches the separated-atom limit. The curve shows the expected behavior, though the single-parameter ansatz has known limitations in the dissociation region where electron correlation is strong.
 
-\textbf{Ansatz Effectiveness:} The double excitation ansatz with a single parameter works remarkably well for H$_2$ near equilibrium. This is because the most important correlation effect is both electrons moving together from the bonding ($\sigma$) to antibonding ($\sigma^*$) orbital, which is exactly what the double excitation operator captures.
+\textbf{Ansatz Effectiveness:} The double excitation ansatz with a single parameter works well for H$_2$ near equilibrium. The dominant correlation effect in H$_2$ is both electrons moving from the bonding ($\sigma$) to antibonding ($\sigma^*$) orbital, which is what the double excitation operator captures.
 
-\textbf{HPC Focus:} While the physical interpretation above validates the correctness of our VQE implementation, the primary contribution of this work is the HPC parallelization strategy. The quantum chemistry serves as a representative scientific workload; the parallelization techniques (JIT compilation, GPU acceleration, MPI distribution) apply broadly to other variational quantum algorithms.
+\textbf{HPC Focus:} The physical results above validate our VQE implementation, but this paper focuses on HPC parallelization. The quantum chemistry here is a representative workload; the parallelization techniques apply to other variational quantum algorithms.
 
 \subsection{Computational Performance Analysis}
 
-\textbf{Serial Baseline:} The serial implementation achieves 157.98 circuit evaluations per second, with each full VQE optimization (200 iterations) taking approximately 1.27 seconds in our initial benchmarks. However, on the HPC cluster with 100 bond lengths and 300 iterations, the serial runtime increased to 593.95 seconds (9.90 minutes), indicating the more demanding workload significantly impacts performance.
+\textbf{Serial Baseline:} The serial implementation achieves 157.98 circuit evaluations per second. Each VQE optimization (200 iterations) takes about 1.27 seconds in initial benchmarks. On the HPC cluster with 100 bond lengths and 300 iterations, serial runtime was 593.95 seconds (9.90 minutes).
 
-\textbf{Bottleneck Identification:} Performance profiling via Python's \texttt{cProfile} confirmed that VQE optimization dominates runtime. The profiler showed that gradient computation (\texttt{\_grad\_with\_forward}) and cost function evaluation (\texttt{qnode.\_\_call\_\_}) together account for 28.2 seconds of the 32.7 second computation time (86\%), with the remaining time split between Hamiltonian generation and result plotting. Excluding I/O and visualization overhead, more than 95\% of computational work occurs in the VQE optimization loops. This high fraction of parallelizable work ($f_p \approx 0.95$) is ideal for achieving strong speedups from parallelization.
+\textbf{Bottleneck Identification:} Profiling with Python's \texttt{cProfile} confirmed that VQE optimization dominates runtime. Gradient computation (\texttt{\_grad\_with\_forward}) and cost function evaluation (\texttt{qnode.\_\_call\_\_}) account for 28.2 seconds of the 32.7 second total (86\%). Excluding I/O and plotting, over 95\% of work is in the VQE loops ($f_p \approx 0.95$), which is favorable for parallelization.
 
-\textbf{JIT Compilation Performance:} The Serial Optax+JIT implementation achieved 4.13× speedup (143.80s vs 593.95s). This improvement comes from:
+\textbf{JIT Compilation Performance:} Serial Optax+JIT achieved 4.13× speedup (143.80s vs 593.95s) from:
 \begin{itemize}
-    \item Pre-compilation of the quantum circuit and optimization loop via Catalyst @qjit
-    \item More efficient Optax optimizer compared to PennyLane's built-in Adam
-    \item Compiled gradient computation via catalyst.grad
-    \item Better memory access patterns from JAX optimizations
+    \item Pre-compilation via Catalyst @qjit
+    \item Optax optimizer (faster than PennyLane's Adam)
+    \item Compiled gradient computation
+    \item JAX memory optimizations
 \end{itemize}
 
-This control experiment is critical: it establishes the proper baseline (143.80s) for measuring MPI parallelization effect, rather than conflating optimizer improvements with parallel speedup.
+This control establishes the baseline (143.80s) for measuring MPI speedup separately from optimizer improvements.
 
-\textbf{GPU Acceleration Results:} The GPU implementation using \texttt{lightning.gpu} on NVIDIA H100 showed scale-dependent performance:
+\textbf{GPU Acceleration Results:} The \texttt{lightning.gpu} implementation on H100 showed:
 \begin{itemize}
-    \item At 4 qubits (H$_2$ molecule): 3.60× speedup, but CPU+JIT (143.80s) still wins vs GPU (164.91s)
-    \item At 26 qubits (scaling study): 80.5× speedup (1425s CPU → 17.7s GPU)
-    \item GPU advantage increases dramatically with qubit count
+    \item At 4 qubits (H$_2$): 3.60× speedup, but CPU+JIT (143.80s) beats GPU (164.91s)
+    \item At 26 qubits: 80.5× speedup (1425s CPU → 17.7s GPU)
 \end{itemize}
 
-The CPU vs GPU scaling study (4--26 qubits) revealed that GPU wins at \textbf{all} scales when using a simple Hamiltonian. The discrepancy with our H$_2$ results (where CPU+JIT won) is attributed to Hartree-Fock overhead in molecular simulations that doesn't benefit from GPU acceleration.
+The scaling study (4--26 qubits) showed GPU wins at all scales with a simple Hamiltonian. The H$_2$ case differs due to Hartree-Fock overhead that does not benefit from GPU.
 
-\textbf{Multi-GPU Scaling Results:} The 4× H100 benchmark demonstrated excellent multi-GPU performance:
+\textbf{Multi-GPU Scaling Results:} The 4× H100 benchmark showed:
 \begin{itemize}
-    \item \textbf{Maximum qubits}: Single H100 achieves 29 qubits before OOM (8GB state vector, $\sim$32GB with adjoint overhead)
-    \item \textbf{Throughput}: 0.98 problems/second with 4 GPUs working in parallel
-    \item \textbf{Scaling efficiency}: 3.98× speedup with 99.4\% parallel efficiency
-    \item \textbf{Memory limit}: 30 qubits (64GB estimated) exceeds H100's 80GB available memory
+    \item \textbf{Max qubits}: 29 on single H100 (8GB state vector, $\sim$32GB with adjoint overhead)
+    \item \textbf{Throughput}: 0.98 problems/second with 4 GPUs
+    \item \textbf{Efficiency}: 3.98× speedup, 99.4\% parallel efficiency
+    \item \textbf{Memory limit}: 30 qubits ($\sim$64GB) exceeds available memory
 \end{itemize}
 
-\textbf{MPI Scaling Analysis (Corrected Baseline):} The MPI implementation shows outstanding performance when analyzed against the proper Optax+JIT baseline (143.80s):
+\textbf{MPI Scaling (Corrected Baseline):} Against the Optax+JIT baseline (143.80s):
 \begin{itemize}
-    \item \textbf{True MPI speedup}: 28.53× from Serial Optax+JIT (143.80s) to MPI-32 (5.04s)
-    \item \textbf{Super-linear per-process}: MPI-2 achieves 17× speedup (expected: 2×) due to cache effects and independent JIT compilation per process
-    \item \textbf{Embarrassingly parallel}: Zero communication overhead in scatter-gather pattern
-    \item \textbf{Saturation}: Speedup levels off at 28.53× (relative to Optax+JIT) around 16-32 processes
+    \item \textbf{True speedup}: 28.53× from 143.80s to 5.04s (MPI-32)
+    \item \textbf{Super-linear}: MPI-2 achieves 17× (expected 2×) due to cache effects
+    \item \textbf{Zero overhead}: Embarrassingly parallel scatter-gather
+    \item \textbf{Saturation}: Levels off around 16--32 processes
 \end{itemize}
 
-\textbf{Four-Factor Decomposition:} The total speedup story includes four independent factors:
+\textbf{Four-Factor Decomposition:} The total speedup has four factors:
 \begin{itemize}
-    \item Optimizer+JIT effect: 4.13× (593.95s → 143.80s)
-    \item GPU acceleration: 3.60× to 80.5× (depending on qubit count)
-    \item MPI parallelization: 28.53× (143.80s → 5.04s)  
-    \item Multi-GPU scaling: 3.98× with 99.4\% efficiency
+    \item Optimizer+JIT: 4.13× (593.95s → 143.80s)
+    \item GPU: 3.60× to 80.5× (scale-dependent)
+    \item MPI: 28.53× (143.80s → 5.04s)
+    \item Multi-GPU: 3.98× at 99.4\% efficiency
 \end{itemize}
 
 \subsection{Relevance to Original Questions}
@@ -665,7 +664,7 @@ However, our results also reveal important lessons:
     \item \textbf{Practical limits}: Speedup levels off beyond 16 processes for this problem size
 \end{itemize}
 
-The combination of JIT compilation and MPI parallelization proved most effective, reducing runtime from 593.95s to 5.04s---a practical speedup that makes parameter sweeps and optimization studies feasible.
+JIT compilation combined with MPI parallelization reduced runtime from 593.95s to 5.04s, making parameter sweeps feasible in practice.
 
 \section{Conclusions}
 
@@ -720,43 +719,25 @@ We successfully implemented and benchmarked the Variational Quantum Eigensolver 
 
 \subsection{Broader Impact}
 
-This work demonstrates how classical HPC techniques can dramatically accelerate hybrid quantum-classical algorithms. While we focused on the hydrogen molecule, the parallelization strategies and lessons learned apply broadly to:
+The parallelization strategies here extend beyond H$_2$ to larger molecules, multi-dimensional parameter sweeps, ansatz optimization, and other variational algorithms like QAOA.
 
+Some practical takeaways:
 \begin{itemize}
-    \item \textbf{Larger molecules}: Systems with many atoms and different possible shapes
-    \item \textbf{Multi-dimensional parameter sweeps}: Exploring how molecules change shape during reactions
-    \item \textbf{Ansatz optimization}: Testing different quantum circuit designs in parallel
-    \item \textbf{Ensemble calculations}: Computing averages over many molecular states
-    \item \textbf{Other variational algorithms}: Similar quantum algorithms like QAOA for optimization problems
+    \item GPU speedup grows with qubit count (10× at 4 qubits, 80× at 26 qubits)
+    \item Optimize serial code before parallelizing (4.13× from JIT alone)
+    \item VQE parameter sweeps scale near-perfectly across GPUs (99.4\% efficiency)
+    \item Single H100 maxes out at 29 qubits; beyond that requires distributed methods
 \end{itemize}
 
-\textbf{Key Lessons for Quantum Algorithm Acceleration:}
+As quantum hardware scales past 100 qubits, classical simulation will become infeasible, but these HPC techniques remain relevant for validation, hybrid algorithms, error correction, and algorithm tuning.
 
-\begin{enumerate}
-    \item \textbf{GPU scales with problem size}: GPU speedup increases from 10$\times$ at 4 qubits to 80$\times$ at 26 qubits. For production quantum chemistry, GPU acceleration is essential.
-
-    \item \textbf{Algorithmic improvements first}: Optimizer choice and JIT compilation had 4.13$\times$ impact---always optimize your serial code before parallelizing. The optimizer+JIT effect is independent of and multiplies with parallelization gains.
-
-    \item \textbf{Multi-GPU scales near-perfectly}: 99.4\% parallel efficiency demonstrates that VQE parameter sweeps are ideal for multi-GPU deployment. No complex communication patterns needed.
-
-    \item \textbf{Know your memory limits}: Single H100 (80GB) maxes at 29 qubits due to adjoint differentiation overhead. Larger simulations require distributed state vector methods.
-
-    \item \textbf{Embarrassingly parallel is ideal}: VQE's structure (where each bond length calculation is independent) achieves nearly perfect speedup without needing complicated communication between processors.
-\end{enumerate}
-
-As quantum computers improve to 100+ qubits and classical simulation becomes impossible, these HPC techniques will remain important for:
-\begin{itemize}
-    \item Checking that quantum hardware gives correct answers
-    \item Hybrid algorithms that split work between classical and quantum computers
-    \item Error correction methods that require running circuits many times
-    \item Training and tuning variational quantum algorithms
-\end{itemize}
-
-The combination of 117$\times$ speedup for molecular simulations and 80$\times$ GPU acceleration for larger qubit counts demonstrates that practical quantum chemistry calculations are achievable today using classical HPC, while also preparing us for future hybrid quantum-classical computing.
+We achieved 117× speedup for molecular simulations and 80× GPU acceleration at 26 qubits. These results show that useful quantum chemistry calculations are practical today on HPC infrastructure.
 
 \section{Acknowledgements}
 
 We thank Dr. Khanal for guidance on parallelization strategies and HPC methodologies. This work was conducted on the ERAU Vega HPC cluster featuring AMD EPYC 9654 processors and NVIDIA GPU accelerators. The quantum simulations used the PennyLane quantum computing framework with Lightning backend, JAX for automatic differentiation, and Catalyst for JIT compilation.
+
+Large language model tools were used to assist with manuscript preparation and editing. The authors take full responsibility for all scientific content, methodology, and results.
 
 \section{Codebase}
 
