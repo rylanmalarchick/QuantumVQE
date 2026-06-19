@@ -4,7 +4,7 @@ Variational Quantum Eigensolver (VQE) implementation for computing the ground st
 
 ## Overview
 
-This project implements a quantum chemistry simulation using the Variational Quantum Eigensolver algorithm to compute the potential energy surface of the H2 molecule. We demonstrate comprehensive HPC parallelization achieving **117× total speedup** (593.95s → 5.04s) through JIT compilation, GPU acceleration, and MPI parallelization on the ERAU Vega HPC cluster featuring 4× NVIDIA H100 GPUs.
+This project implements a quantum chemistry simulation using the Variational Quantum Eigensolver algorithm to compute the potential energy surface of the H2 molecule. We parallelize the calculation across JIT compilation, GPU acceleration, and MPI, reaching a **117× total speedup** (593.95s → 5.04s) on the ERAU Vega HPC cluster with 4× NVIDIA H100 GPUs.
 
 ### The Model
 
