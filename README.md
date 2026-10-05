@@ -1,6 +1,6 @@
 # QuantumVQE
 
-This repository has moved to the author'\''s self-hosted Forgejo:
+This repository has moved to the author's self-hosted Forgejo:
 
     https://code.rylanmalarchick.com/rylanmalarchick/QuantumVQE
 
