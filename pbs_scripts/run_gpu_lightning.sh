@@ -7,13 +7,12 @@
 #PBS -m abe
 #PBS -M rylan@example.com
 
-# TRUE GPU-Accelerated VQE using lightning.gpu
-# This uses PennyLane's GPU-accelerated quantum simulator
+# H2 VQE on PennyLane's lightning.gpu simulator
 # Compare to:
 #   - main.py (Serial PennyLane Adam): ~593.95s
-#   - vqe_serial_optax.py (Serial Optax+JIT CPU): TBD
+#   - vqe_serial_optax.py (Serial Optax+JIT CPU): ~143.80s
 #   - vqe_qjit.py (Optax+JIT CPU, lightning.qubit): ~171.79s
-#   - vqe_mpi.py: ~5-8s
+#   - vqe_mpi.py: ~5-8s (rank-0 time, different allocation; not comparable)
 
 cd $PBS_O_WORKDIR
 
@@ -24,7 +23,7 @@ eval "$(/apps/spack/opt/spack/linux-rocky8-zen4/gcc-13.2.0/anaconda3-2023.09-0-3
 conda activate vqe-lightning-gpu
 
 echo "============================================"
-echo "TRUE GPU VQE Run (lightning.gpu)"
+echo "GPU VQE Run (lightning.gpu)"
 echo "============================================"
 echo "Start time: $(date)"
 echo "Running on node: $(hostname)"
@@ -47,7 +46,7 @@ echo "============================================"
 echo "Running vqe_gpu.py (lightning.gpu)"
 echo "============================================"
 
-# Run the TRUE GPU code (lightning.gpu device)
+# Run the lightning.gpu version
 python src/main_study/vqe_gpu.py
 
 echo "============================================"

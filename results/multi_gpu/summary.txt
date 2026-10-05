@@ -1,26 +1,28 @@
+Multi-GPU VQE benchmark, 4x NVIDIA H100 (80 GB each)
+====================================================
 
-Multi-GPU VQE Benchmark Results
-================================
-Hardware: 4x NVIDIA H100 (80GB each)
-Timestamp: 2025-12-01T22:49:04.416159
+Run: 2025-12-01T22:49:04. Raw data: multi_gpu_benchmark.json.
+Problem: sum of Pauli-Z Hamiltonian, RY layer (plus RZ layer in test 1) and
+CNOT chain, lightning.gpu with adjoint differentiation, gradient descent 0.1.
+One MPI rank per GPU.
 
-1. MAX QUBIT SCALING
-   - Maximum qubits achieved: 29
-   - State vector at 29q: 8.0 GB
-   - Estimated GPU memory: 32.0 GB
+1. MAXIMUM SIZE ON ONE H100 (5 iterations)
+   26 qubits   0.62 s per iteration
+   28 qubits   2.46 s per iteration
+   29 qubits   5.07 s per iteration
+   30 qubits   out-of-memory error
+   The "est_gpu_mem_gb" values in the JSON are 4x the complex128 state
+   vector. They are estimates. The estimate gives 64 GB at 30 qubits, below
+   the 80 GB limit, so it undercounts the real allocation.
 
-2. MULTI-GPU THROUGHPUT
-   - Total problems: 12
-   - Wall clock time: 12.27s
-   - Throughput: 0.978 problems/sec
-   - Effective speedup: 4x (perfect parallel)
+2. THROUGHPUT TEST: 12 problems, 20 qubits, 3 per GPU
+   Longest per-GPU time: 12.27 s
 
-3. SCALING EFFICIENCY
-   - Speedup: 3.98x
-   - Parallel efficiency: 99.4%
+3. LOAD-BALANCE TEST: 8 problems, 22 qubits, 15 iterations, 2 per GPU
+   Longest per-GPU time:   8.04 s
+   Sum of per-GPU times:  31.99 s
+   The JSON keys "speedup" (3.98) and "efficiency_percent" (99.4) divide
+   these two numbers. No single-GPU run of the 8 problems was made, so the
+   ratio shows load balance across the GPUs. It is not a measured speedup.
 
-Generated plots:
-  - results/multi_gpu/max_qubit_scaling.png
-  - results/multi_gpu/throughput_comparison.png
-  - results/multi_gpu/scaling_efficiency.png
-  - results/multi_gpu/multi_gpu_summary.png
+Figure: max_qubit_scaling.png (test 1), from scripts/plot_max_qubit_scaling.py.

@@ -1,8 +1,8 @@
 """
 GPU-Accelerated VQE Implementation (lightning.gpu + Optax)
 
-This script uses PennyLane's lightning.gpu device for true GPU acceleration.
-Used to benchmark actual GPU speedup over CPU implementations.
+This script runs the H2 scan on PennyLane's lightning.gpu device. It starts
+every bond length from zero parameters and stops at |dE| < 1e-8 or MAX_STEPS.
 
 Key differences from other implementations:
 - vs main.py: Uses Optax optimizer + lightning.gpu device (not PennyLane Adam)
@@ -103,7 +103,6 @@ def main():
     print("GPU-ACCELERATED VQE (lightning.gpu + Optax)")
     print("="*60)
     print(f"Device: {DEVICE_NAME}")
-    print("This benchmark measures true GPU acceleration")
     print("Note: No Catalyst JIT - GPU accel from lightning.gpu device")
     print("="*60)
     

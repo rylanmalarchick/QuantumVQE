@@ -2,8 +2,10 @@
 """
 VQE Scaling Study: CPU vs GPU Performance Analysis
 
-This script runs a comprehensive benchmark comparing CPU+JIT vs GPU performance
-across increasing qubit counts to find the crossover point where GPU wins.
+This script times a VQE loop on a CPU stack (lightning.qubit, JAX interface,
+jax.jit, Optax Adam) and a GPU stack (lightning.gpu, autograd interface,
+adjoint differentiation, PennyLane Adam) across qubit counts. The stacks differ
+in more than the device, so their time ratio is not a device-only comparison.
 
 Hardware Target:
     - CPU: 2x AMD EPYC 9654 (192 cores), 1.5TB RAM
@@ -298,7 +300,7 @@ def generate_plots(results: List[Dict], output_dir: str):
     
     # Create figure with 4 subplots
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle('VQE Scaling Study: CPU+JIT vs GPU (H100)\nAMD EPYC 9654 + NVIDIA H100 PCIe 81GB', 
+    fig.suptitle('VQE Scaling Study: CPU stack (lightning.qubit + JAX) vs GPU stack (lightning.gpu + autograd)', 
                  fontsize=14, fontweight='bold')
     
     # Plot 1: Absolute times (log scale)
@@ -316,14 +318,14 @@ def generate_plots(results: List[Dict], output_dir: str):
         ax1.axvline(x=crossover_qubit, color='green', linestyle='--', alpha=0.7,
                    label=f'Crossover: {crossover_qubit} qubits')
     
-    # Plot 2: GPU Speedup
+    # Plot 2: CPU/GPU time ratio
     ax2 = axes[0, 1]
     colors = ['#2ECC71' if s > 1 else '#E74C3C' for s in speedups]
     bars = ax2.bar(qubits, speedups, color=colors, edgecolor='black', linewidth=1)
-    ax2.axhline(y=1.0, color='black', linestyle='--', linewidth=2, label='Breakeven (1.0×)')
+    ax2.axhline(y=1.0, color='black', linestyle='--', linewidth=2, label='Ratio 1')
     ax2.set_xlabel('Number of Qubits', fontsize=12)
-    ax2.set_ylabel('GPU Speedup (CPU_time / GPU_time)', fontsize=12)
-    ax2.set_title('GPU Speedup vs CPU+JIT', fontsize=12, fontweight='bold')
+    ax2.set_ylabel('CPU time / GPU time', fontsize=12)
+    ax2.set_title('CPU/GPU Time Ratio (two software stacks)', fontsize=12, fontweight='bold')
     ax2.legend(fontsize=10)
     ax2.grid(axis='y', alpha=0.3)
     
@@ -401,7 +403,7 @@ def create_summary_plot(results: List[Dict], speedups: List[float],
     # Add crossover annotation
     if crossover_qubit:
         ax.axvline(x=crossover_qubit, color='#9B59B6', linestyle='--', linewidth=2, alpha=0.7)
-        ax.annotate(f'Crossover: {crossover_qubit} qubits\nGPU wins beyond this point',
+        ax.annotate(f'Crossover: {crossover_qubit} qubits',
                    xy=(crossover_qubit, 1.0),
                    xytext=(crossover_qubit + 2, 0.5),
                    fontsize=11,
@@ -410,9 +412,9 @@ def create_summary_plot(results: List[Dict], speedups: List[float],
     
     # Labels
     ax.set_xlabel('Number of Qubits', fontsize=14)
-    ax.set_ylabel('GPU Speedup (× faster than CPU+JIT)', fontsize=14)
-    ax.set_title('VQE Scaling Study: When Does GPU Beat CPU+JIT?\n'
-                'AMD EPYC 9654 (192 cores) vs NVIDIA H100 (81GB)', 
+    ax.set_ylabel('CPU time / GPU time', fontsize=14)
+    ax.set_title('VQE Scaling Study: CPU/GPU Time Ratio\n'
+                'Two software stacks, not a device-only comparison', 
                 fontsize=14, fontweight='bold')
     
     # Add value labels on bars
@@ -428,8 +430,8 @@ def create_summary_plot(results: List[Dict], speedups: List[float],
     # Legend
     from matplotlib.patches import Patch
     legend_elements = [
-        Patch(facecolor='#3498DB', edgecolor='black', label='CPU+JIT Wins'),
-        Patch(facecolor='#2ECC71', edgecolor='black', label='GPU Wins'),
+        Patch(facecolor='#3498DB', edgecolor='black', label='CPU stack faster'),
+        Patch(facecolor='#2ECC71', edgecolor='black', label='GPU stack faster'),
     ]
     ax.legend(handles=legend_elements, loc='upper left', fontsize=12)
     
@@ -555,7 +557,7 @@ def run_scaling_study(
         if cpu_time and gpu_time:
             speedup = cpu_time / gpu_time
             winner = "GPU" if speedup > 1 else "CPU+JIT"
-            print(f"\n>>> SPEEDUP: {speedup:.2f}x - {winner} wins! <<<")
+            print(f"\nCPU/GPU time ratio: {speedup:.2f} (lower time: {winner} stack)")
             result['speedup'] = speedup
             result['winner'] = winner
         else:

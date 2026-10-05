@@ -1,14 +1,13 @@
 """
 Serial Optax+JIT VQE Implementation (CPU-only, no MPI)
 
-This script isolates the optimizer+JIT effect from parallelization.
-Used as a control experiment to separate:
-- Optimizer effect: PennyLane Adam -> Optax
-- JIT compilation effect: No JIT -> Catalyst JIT
-- Parallelization effect: This baseline -> MPI-N
+Single-process reference for vqe_mpi.py, which runs the same compiled runner.
 
 Key differences from other implementations:
-- vs main.py: Uses Optax optimizer + JIT compilation (not PennyLane Adam)
+- vs main.py: Catalyst JIT, Optax Adam with lr STEP_SIZE (not 0.01),
+  stop at |dE| < 1e-8 or MAX_STEPS (not a fixed MAX_STEPS), and warm start
+  from the previous bond length (not zeros). These four settings change
+  together, so the runtime difference cannot be split among them.
 - vs vqe_qjit.py: Explicitly forces CPU-only (no GPU)
 - vs vqe_mpi.py: No MPI parallelization (single process)
 """
@@ -113,7 +112,6 @@ def main():
     print("="*60)
     print("SERIAL OPTAX+JIT VQE (CPU-only, No MPI)")
     print("="*60)
-    print("This benchmark isolates optimizer+JIT effect from parallelization")
     print("="*60)
     
     static_ops, hf_state, doubles_wires, n_params = get_static_molecular_data()

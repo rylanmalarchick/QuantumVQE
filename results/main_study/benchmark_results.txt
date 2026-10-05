@@ -1,146 +1,43 @@
-VQE BENCHMARK RESULTS - COMPLETE ANALYSIS
-============================================================
-Hardware: ERAU Vega HPC Cluster
-  - CPU: AMD EPYC 9654 (192 cores per node)
-  - GPU: NVIDIA H100 PCIe (81GB VRAM)
-  - Interconnect: InfiniBand HDR
-============================================================
+H2 VQE benchmark results, ERAU Vega HPC cluster
+===============================================
 
-WORKLOAD CONFIGURATION:
-  - Bond lengths: 100 points (0.35 - 3.0 Angstrom)
-  - Max VQE iterations: 300 per bond length
-  - Qubits: 4 (H2 molecule, STO-3G basis)
-  - Convergence tolerance: 1e-8
+Hardware: AMD EPYC 9654 (192 cores per node), 4x NVIDIA H100 PCIe.
+Workload: H2, STO-3G, 4 qubits, 100 bond lengths from 0.35 to 3.0 Angstrom,
+at most 300 VQE iterations per bond length.
 
-============================================================
-COMPLETE BENCHMARK RESULTS
-============================================================
 
-Implementation                    Time (s)    Speedup vs Baseline
-------------------------------------------------------------
-1. Serial PennyLane Adam          593.95      1.00x (baseline)
-2. Serial Optax+JIT (CPU)         143.80      4.13x
-3. GPU (lightning.gpu + Optax)    164.91      3.60x
-4. CPU+JIT (vqe_qjit.py)          171.79      3.46x
-5. MPI-2  (Optax+JIT)               8.45     70.29x
-6. MPI-4  (Optax+JIT)               6.07     97.85x
-7. MPI-8  (Optax+JIT)               5.48    108.39x
-8. MPI-16 (Optax+JIT)               5.06    117.38x
-9. MPI-32 (Optax+JIT)               5.04    117.85x
+SINGLE-PROCESS RUNS
 
-============================================================
-THREE-FACTOR SPEEDUP ANALYSIS
-============================================================
+Script                 Device           Optimizer             Stop rule              Start per bond   Iterations   Runtime    Time/iter
+main.py                lightning.qubit  PennyLane Adam 0.01   fixed 300              zeros            30,000       593.95 s   0.0198 s
+vqe_serial_optax.py    lightning.qubit  Optax Adam 0.05,      |dE| < 1e-8 or 300     previous bond     7,033       143.80 s   0.0204 s
+                                        Catalyst qjit
+vqe_gpu.py             lightning.gpu    Optax Adam 0.05       |dE| < 1e-8 or 300     zeros            11,345       164.91 s   0.0145 s
+vqe_qjit.py            lightning.qubit  Optax Adam 0.05,      |dE| < 1e-8 or 300     previous bond         -       171.79 s   -
+                                        Catalyst qjit
 
-FACTOR 1: Optimizer + JIT Compilation Effect
-------------------------------------------------------------
-Comparison: Serial PennyLane Adam vs Serial Optax+JIT (CPU)
-  Before:  593.95s (PennyLane AdamOptimizer, no JIT)
-  After:   143.80s (Optax optimizer + Catalyst JIT)
-  Speedup: 4.13x
+Time/iter is the runtime divided by the iteration count. It includes the
+Hartree-Fock Hamiltonian construction for each bond length.
 
-Components:
-  - Optax optimizer (JAX-compatible, stateless)
-  - Catalyst @qjit decorator (JIT compilation)
-  - catalyst.grad (compiled gradients)
-  - catalyst.while_loop (compiled optimization loop)
+The runtime of vqe_serial_optax.py is 4.13x lower than main.py and its
+iteration count is 4.3x lower. The runs differ in four settings (compilation,
+learning rate, stop rule, start), and no run changes one setting at a time.
 
-FACTOR 2: GPU Device Acceleration Effect
-------------------------------------------------------------
-Comparison: Serial PennyLane Adam vs GPU lightning.gpu
-  Before:  593.95s (lightning.qubit, CPU)
-  After:   164.91s (lightning.gpu, NVIDIA H100)
-  Speedup: 3.60x
 
-Note: CPU+JIT (143.80s) outperforms GPU (164.91s) for 4 qubits
-  - GPU overhead exceeds benefit for small circuits
-  - GPU advantage increases with qubit count (>10 qubits)
-  - Per-iteration: GPU is faster (0.0145s vs 0.0204s)
-  - But JIT enables early convergence (fewer iterations)
+MPI RUNS (vqe_mpi.py, Optax Adam 0.05 + Catalyst qjit)
 
-FACTOR 3: MPI Parallelization Effect
-------------------------------------------------------------
-Comparison: Serial Optax+JIT vs MPI-N Optax+JIT
-  Baseline: 143.80s (Serial Optax+JIT, 1 process)
+Ranks   Runtime (rank 0)
+    2   8.45 s
+    4   6.07 s
+    8   5.48 s
+   16   5.06 s
+   32   5.04 s
 
-Procs    Time (s)    Speedup vs Optax+JIT    Efficiency
-------------------------------------------------------------
-1        143.80      1.00x                   100.0%
-2          8.45     17.02x                   851.0%
-4          6.07     23.69x                   592.2%
-8          5.48     26.24x                   328.0%
-16         5.06     28.42x                   177.6%
-32         5.04     28.53x                    89.2%
+vqe_mpi.py records the elapsed time on rank 0 only, before the gather.
 
-Note: Efficiency >100% due to combined JIT + MPI effect
-  - MPI processes each compile independently
-  - Embarrassingly parallel workload (no communication overhead)
-  - Near-linear scaling up to 8 processes
-
-COMBINED EFFECT (All Optimizations)
-------------------------------------------------------------
-  From:    593.95s (Serial PennyLane Adam)
-  To:        5.04s (MPI-32 Optax+JIT)
-  Speedup: 117.85x
-
-Breakdown:
-  - Optimizer + JIT:  4.13x
-  - MPI-32:          28.53x (vs Optax+JIT baseline)
-  - Combined:       ~117.85x (4.13 × 28.53 ≈ 117.85)
-
-============================================================
-MPI STRONG SCALING ANALYSIS (Corrected Baseline)
-============================================================
-
-Using Serial Optax+JIT (143.80s) as proper baseline:
-
-Procs    Time (s)    Speedup    Efficiency    Notes
-------------------------------------------------------------
-1        143.80      1.00x      100.0%        Baseline (Optax+JIT)
-2          8.45     17.02x      851.0%        Super-linear*
-4          6.07     23.69x      592.2%        Super-linear*
-8          5.48     26.24x      328.0%        Good scaling
-16         5.06     28.42x      177.6%        Diminishing returns
-32         5.04     28.53x       89.2%        Near saturation
-
-*Super-linear speedup explanation:
-  - Each MPI process runs JIT compilation independently
-  - JIT compilation is one-time overhead amortized over fewer bond lengths
-  - Embarrassingly parallel = no communication overhead
-  - Cache effects from smaller working set per process
-
-============================================================
-DEVICE AND OPTIMIZER COMPARISON
-============================================================
-
-Same workload, different acceleration strategies:
-
-Strategy                          Time (s)    Per-Iteration (s)
-------------------------------------------------------------
-PennyLane Adam (CPU, no JIT)      593.95      N/A (fixed 300 iter)
-Optax+JIT (CPU, lightning.qubit)  143.80      0.0204
-Optax (GPU, lightning.gpu)        164.91      0.0145
-Optax+JIT (CPU, vqe_qjit.py)      171.79      ~0.024
-
-Key Insight: JIT compilation > GPU for small circuits (4 qubits)
-  - JIT enables early convergence (adaptive iteration count)
-  - GPU has fixed overhead that dominates at small scale
-  - GPU would win for larger circuits (15+ qubits)
-
-============================================================
-FILES AND ENVIRONMENTS
-============================================================
-
-Source Files:
-  - main.py              : Serial PennyLane Adam baseline
-  - vqe_serial_optax.py  : Serial Optax+JIT (CPU)
-  - vqe_gpu.py           : GPU lightning.gpu + Optax
-  - vqe_qjit.py          : CPU Optax+JIT (Catalyst)
-  - vqe_mpi.py           : MPI parallel + Optax+JIT
-
-Conda Environments:
-  - vqe-gpu              : Catalyst + MPI (JAX 0.6.2)
-  - vqe-lightning-gpu    : lightning.gpu (no Catalyst)
-  - vqe-openmpi          : MPI-only
-
-============================================================
+These runtimes are not compared with the single-process runs. The serial job
+requested one core (ppn=1). The MPI jobs ran under other allocations. Split
+the per-bond times in logs/serial_optax_output.log the same way as
+vqe_mpi.py: rank 0 gets 73.5 s of work at 2 ranks, against 8.45 s measured.
+So the jobs had different resources, and the runtime ratio is not a parallel
+speedup.

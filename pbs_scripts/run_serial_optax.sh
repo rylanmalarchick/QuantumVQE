@@ -8,11 +8,11 @@
 #PBS -M rylan@example.com
 
 # Serial Optax+JIT VQE (CPU-only, No MPI, No GPU)
-# This benchmark isolates the optimizer+JIT effect from parallelization
+# Differs from main.py in compilation, learning rate, stop rule, and warm start
 # Compare to:
 #   - main.py (Serial PennyLane Adam): ~593.95s
-#   - vqe_qjit.py on GPU: ~171.79s
-#   - vqe_mpi.py: ~5-8s
+#   - vqe_qjit.py (CPU, lightning.qubit): ~171.79s
+#   - vqe_mpi.py: ~5-8s (rank-0 time, different allocation; not comparable)
 
 cd $PBS_O_WORKDIR
 

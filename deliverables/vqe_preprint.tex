@@ -65,7 +65,7 @@ This work addresses two primary questions:
     \item \textbf{High Performance Computing}: How effectively can the VQE algorithm be parallelized to reduce computational time, and what speedups can be achieved through JIT compilation, multiprocessing, and distributed computing on HPC clusters?
 \end{enumerate}
 
-The serial implementation provides a baseline, and the parallel versions show good scaling up to 32 processes.
+The serial implementation provides the baseline for the other implementations.
 
 \subsection{Related Work}
 
@@ -94,20 +94,20 @@ This continuous-space Hamiltonian must be converted to a finite basis set (we us
 The specific computational problem is:
 
 \begin{itemize}
-    \item \textbf{Input}: Set of bond lengths $\{d_1, \ldots, d_{100}\}$ uniformly spaced from 0.1 to 3.0 \AA
+    \item \textbf{Input}: Set of bond lengths $\{d_1, \ldots, d_{100}\}$ uniformly spaced from 0.35 to 3.0 \AA
     \item \textbf{Output}: Ground state energies $\{E_1, \ldots, E_{100}\}$ at each bond length
-    \item \textbf{Constraint}: Each energy must converge to sufficient accuracy (200 VQE iterations)
+    \item \textbf{Constraint}: Each energy must converge (the baseline runs 300 VQE iterations per bond length)
     \item \textbf{Objective}: Minimize total wall-clock time while maintaining accuracy
 \end{itemize}
 
 The key computational challenge is that each bond length requires:
 \begin{itemize}
     \item Hartree-Fock calculation to generate molecular Hamiltonian
-    \item 200 quantum circuit evaluations with gradient computation
+    \item Up to 300 optimization steps, each with a cost and a gradient evaluation
     \item Parameter updates via Adam optimizer
 \end{itemize}
 
-This results in 8,000 total circuit evaluations taking approximately 50 seconds in the serial implementation.
+On the cluster, the baseline runs 30,000 optimization steps in total (Section~\ref{sec:parallel_results}).
 
 \section{Model Formulation}
 
@@ -171,7 +171,7 @@ The VQE algorithm finds the parameter value that gives the lowest energy:
 We use the Adam optimizer with:
 \begin{itemize}
     \item Learning rate: $\alpha = 0.01$
-    \item Iterations per bond configuration: $N_{\text{iter}} = 200$
+    \item Iterations per bond configuration: $N_{\text{iter}} = 300$ (baseline; Section~\ref{sec:parallel_results} lists the settings of the other implementations)
     \item Initial parameter: $\theta_0 = 0$ (starts at Hartree-Fock state)
 \end{itemize}
 
@@ -179,12 +179,12 @@ We use the Adam optimizer with:
 
 \subsection{Problem Structure and Parallelization Opportunities}
 
-The computational task consists of computing the potential energy surface by evaluating $E(\theta^*)$ for $N_b = 100$ bond lengths in the range $[0.1, 3.0]$ \AA. For each bond length $d_i$:
+The computational task consists of computing the potential energy surface by evaluating $E(\theta^*)$ for $N_b = 100$ bond lengths in the range $[0.35, 3.0]$ \AA. For each bond length $d_i$:
 
 \begin{enumerate}
     \item Generate molecular Hamiltonian $H(d_i)$ using Hartree-Fock
     \item Initialize variational parameters $\theta_0 = 0$
-    \item Optimize: $\theta^*_i = \text{Adam}(E(\theta), \theta_0, N_{\text{iter}} = 200)$
+    \item Optimize: $\theta^*_i = \text{Adam}(E(\theta), \theta_0, N_{\text{iter}} = 300)$
     \item Store ground state energy $E_i = E(\theta^*_i)$
 \end{enumerate}
 
@@ -241,9 +241,9 @@ Each quantum circuit evaluation requires $O(4^n)$ operations for an $n$-qubit sy
 \begin{itemize}
     \item State vector dimension: $2^4 = 16$ complex amplitudes
     \item Operations per circuit: $O(16^2) = O(256)$ for state preparation and measurement
-    \item Gradient evaluations: 2 circuit evaluations per parameter (parameter-shift rule)
-    \item Circuit evaluations per bond length: $\sim$200--400 (optimization + gradients)
-    \item Total circuit evaluations: $\sim$8,000--16,000
+    \item Gradient evaluations: one per optimization step
+    \item Optimization steps per bond length: up to 300
+    \item Total optimization steps: up to 30,000
 \end{itemize}
 
 \subsection{Proposed Parallelization Approaches}
@@ -285,7 +285,7 @@ comm = MPI.COMM_WORLD
 rank, size = comm.Get_rank(), comm.Get_size()
 
 if rank == 0:
-    bond_lengths = np.linspace(0.1, 3.0, 100)
+    bond_lengths = np.linspace(0.35, 3.0, 100)
     chunks = np.array_split(bond_lengths, size)
 else:
     chunks = None

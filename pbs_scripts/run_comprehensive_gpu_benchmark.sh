@@ -10,7 +10,7 @@
 # Tests:
 #   1. Max qubit scaling (find H100 memory limit: 26-31 qubits)
 #   2. 4-GPU throughput (problems/second)
-#   3. Scaling efficiency (1 GPU vs 4 GPU)
+#   3. Load balance across 4 GPUs (no single-GPU run)
 
 cd $PBS_O_WORKDIR
 

@@ -230,7 +230,6 @@ def main():
         print(f"Total problems solved: {total_problems}")
         print(f"Wall clock time: {max_time:.2f}s")
         print(f"Throughput: {throughput:.2f} problems/second")
-        print(f"Effective speedup vs 1 GPU: {size}x (perfect parallel)")
         
         results['throughput_test'] = {
             'n_gpus': size,
@@ -297,17 +296,18 @@ def main():
     all_elapsed = comm.gather(elapsed, root=0)
     
     if rank == 0:
-        multi_gpu_time = max(all_elapsed)  # Wall clock
-        single_gpu_time = sum(all_elapsed)  # Sequential would be sum
+        multi_gpu_time = max(all_elapsed)  # Longest per-GPU time
+        # Sum of per-GPU times. This is NOT a measured single-GPU run, so
+        # 'speedup' and 'efficiency_percent' below measure load balance only.
+        single_gpu_time = sum(all_elapsed)
         
         speedup = single_gpu_time / multi_gpu_time if multi_gpu_time > 0 else 0
         efficiency = speedup / size * 100
         
         print(f"\n--- Scaling Summary ---")
-        print(f"Single GPU (sequential): {single_gpu_time:.2f}s")
-        print(f"4 GPUs (parallel):       {multi_gpu_time:.2f}s")
-        print(f"Speedup: {speedup:.2f}x")
-        print(f"Parallel efficiency: {efficiency:.1f}%")
+        print(f"Sum of per-GPU times:  {single_gpu_time:.2f}s")
+        print(f"Longest per-GPU time:  {multi_gpu_time:.2f}s")
+        print(f"Sum / longest (load balance, not a measured speedup): {speedup:.2f}")
         
         results['scaling_test'] = {
             'n_problems': n_problems_each * size,
@@ -329,7 +329,7 @@ def main():
         
         print(f"1. Max qubits on single H100: {results['max_qubits_test'].get('max_achieved', 'N/A')}")
         print(f"2. 4-GPU throughput: {results['throughput_test'].get('throughput_per_second', 'N/A'):.2f} problems/sec")
-        print(f"3. 4-GPU speedup: {results['scaling_test'].get('speedup', 'N/A'):.2f}x ({results['scaling_test'].get('efficiency_percent', 'N/A'):.1f}% efficiency)")
+        print(f"3. Load balance, sum / longest per-GPU time: {results['scaling_test'].get('speedup', 'N/A'):.2f}")
         
         # Save to file
         output_path = 'results/multi_gpu/multi_gpu_benchmark.json'
