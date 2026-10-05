@@ -53,7 +53,7 @@ def plot_scaling_comparison(results):
     speedups = np.array([r['speedup'] for r in results])
     
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-    fig.suptitle('CPU vs GPU Scaling Study (4-26 Qubits)\nAMD EPYC 9654 vs NVIDIA H100', 
+    fig.suptitle('CPU vs GPU Scaling Study (4-26 Qubits)\nlightning.qubit + JAX/jax.jit + Optax vs lightning.gpu + autograd/adjoint + PennyLane Adam', 
                  fontsize=16, fontweight='bold', y=1.02)
     
     # =========================================================================
@@ -63,19 +63,13 @@ def plot_scaling_comparison(results):
     
     # Plot with larger markers and thicker lines
     ax1.semilogy(qubits, cpu_times, 'o-', linewidth=2.5, markersize=10, 
-                 color='#3498DB', label='CPU (JIT-compiled)', zorder=3)
+                 color='#3498DB', label='CPU stack (lightning.qubit, JAX)', zorder=3)
     ax1.semilogy(qubits, gpu_times, 's-', linewidth=2.5, markersize=10, 
-                 color='#E74C3C', label='GPU (H100)', zorder=3)
+                 color='#E74C3C', label='GPU stack (lightning.gpu, autograd)', zorder=3)
     
     # Fill between to show the gap
     ax1.fill_between(qubits, gpu_times, cpu_times, alpha=0.15, color='#2ECC71')
     
-    # Annotate the gap at 26 qubits
-    ax1.annotate(f'{speedups[-1]:.0f}x gap', 
-                 xy=(26, np.sqrt(cpu_times[-1] * gpu_times[-1])),
-                 fontsize=11, fontweight='bold', color='#27AE60',
-                 ha='left', va='center',
-                 xytext=(26.3, np.sqrt(cpu_times[-1] * gpu_times[-1])))
     
     ax1.set_xlabel('Number of Qubits', fontsize=13)
     ax1.set_ylabel('Execution Time (seconds)', fontsize=13)
@@ -103,18 +97,11 @@ def plot_scaling_comparison(results):
     bars = ax2.bar(qubits, speedups, color=colors, edgecolor='black', linewidth=1.2, width=1.5)
     
     # Add breakeven line
-    ax2.axhline(y=1.0, color='black', linestyle='--', linewidth=2, label='Breakeven (1x)')
-    
-    # Add trend annotation
-    ax2.annotate('', xy=(26, 75), xytext=(8, 10),
-                 arrowprops=dict(arrowstyle='->', color='#2C3E50', lw=2))
-    ax2.text(16, 50, 'GPU advantage\nincreases with\nqubit count', 
-             fontsize=10, ha='center', va='center', style='italic',
-             bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+    ax2.axhline(y=1.0, color='black', linestyle='--', linewidth=2, label='Ratio 1')
     
     ax2.set_xlabel('Number of Qubits', fontsize=13)
-    ax2.set_ylabel('GPU Speedup (x faster)', fontsize=13)
-    ax2.set_title('GPU Speedup over CPU', fontsize=14, fontweight='bold')
+    ax2.set_ylabel('CPU time / GPU time', fontsize=13)
+    ax2.set_title('CPU/GPU Time Ratio (two software stacks)', fontsize=14, fontweight='bold')
     ax2.grid(axis='y', alpha=0.3, linestyle='--')
     ax2.set_xticks(qubits)
     ax2.set_xticklabels(qubits, rotation=0)
@@ -126,7 +113,7 @@ def plot_scaling_comparison(results):
         # Alternate label positions for dense bars
         y_offset = 2 if i % 2 == 0 else 5
         ax2.text(bar.get_x() + bar.get_width()/2., bar.get_height() + y_offset,
-                f'{val:.0f}x', ha='center', va='bottom', fontsize=9, fontweight='bold')
+                f'{val:.1f}', ha='center', va='bottom', fontsize=9, fontweight='bold')
     
     plt.tight_layout()
     plt.savefig('results/scaling_study/scaling_comparison.png', dpi=300, bbox_inches='tight')
