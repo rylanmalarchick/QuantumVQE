@@ -49,20 +49,20 @@ Daytona Beach, FL 32114, USA \\[0.5em]
 
 \subsection{Background}
 
-Quantum chemistry calculations help us understand how molecules are structured, how chemical reactions occur, and what properties materials have. A central problem in computational chemistry is finding the ground state energy (lowest energy configuration) and wavefunction (quantum state description) of a molecule. However, exact quantum mechanical calculations become exponentially harder as molecules get larger, making traditional computer methods impractical for large molecules.
+Quantum chemistry computes molecular structure, reaction pathways, and material properties from first principles. A central problem is the ground-state energy and wavefunction of a molecule. The cost of an exact calculation grows exponentially with the number of orbitals, which limits exact classical methods to small molecules.
 
-The Variational Quantum Eigensolver (VQE) is a promising quantum algorithm that combines both quantum and classical computing \cite{peruzzo2014}. Unlike purely quantum algorithms that need perfect quantum computers, VQE works on today's noisy quantum computers. The algorithm uses a quantum circuit (called an ansatz) with adjustable parameters to create trial wavefunctions on a quantum processor, while a classical computer adjusts these parameters to find the lowest energy.
+The Variational Quantum Eigensolver (VQE) is a hybrid quantum-classical algorithm \cite{peruzzo2014} designed for noisy near-term devices. A parameterized quantum circuit (the ansatz) prepares trial wavefunctions, and a classical optimizer adjusts the parameters to minimize the energy.
 
-We focus on the hydrogen molecule (H$_2$), the simplest neutral molecule, which serves as a benchmark system for quantum chemistry methods. Despite its simplicity, H$_2$ exhibits key features of chemical bonding including equilibrium bond length, dissociation energy, and potential energy surface structure.
+We study the hydrogen molecule (H$_2$), the simplest neutral molecule and a standard benchmark for quantum chemistry methods. Its potential energy surface has an equilibrium bond length and a dissociation limit.
 
 \subsection{Issues and Questions to be Addressed}
 
-This work addresses two primary questions:
+This work addresses two questions:
 
 \begin{enumerate}
     \item \textbf{Quantum Chemistry}: Can VQE accurately compute the H$_2$ potential energy surface using a minimal ansatz with a single variational parameter?
 
-    \item \textbf{High Performance Computing}: How effectively can the VQE algorithm be parallelized to reduce computational time, and what speedups can be achieved through JIT compilation, multiprocessing, and distributed computing on HPC clusters?
+    \item \textbf{High Performance Computing}: How do JIT compilation, GPU simulation, and MPI distribution change the runtime of the H$_2$ scan on an HPC node?
 \end{enumerate}
 
 The serial implementation provides the baseline for the other implementations.
@@ -71,9 +71,9 @@ The serial implementation provides the baseline for the other implementations.
 
 Peruzzo et al.~\cite{peruzzo2014} first demonstrated VQE experimentally on a photonic quantum processor. Since then, ansatz design has been a major focus: the Unitary Coupled Cluster (UCC) ansatz~\cite{romero2018} is now standard for molecular simulations, while hardware-efficient ansatzes~\cite{kandala2017} reduce circuit depth on noisy devices.
 
-On the classical simulation side, several tools have emerged for accelerating variational quantum algorithms. PennyLane~\cite{bergholm2018} provides automatic differentiation for quantum circuits, and its Lightning backend~\cite{pennylane_lightning} offers optimized state-vector simulation. NVIDIA's cuQuantum~\cite{cuquantum2023} targets multi-GPU simulation, and JAX~\cite{jax2018} enables JIT compilation for numerical code.
+Several software tools speed up the classical simulation of variational algorithms. PennyLane~\cite{bergholm2018} provides automatic differentiation for quantum circuits, and its Lightning backend~\cite{pennylane_lightning} provides compiled state-vector simulation. NVIDIA's cuQuantum~\cite{cuquantum2023} targets multi-GPU simulation, and JAX~\cite{jax2018} enables JIT compilation for numerical code.
 
-MPI parallelization of quantum chemistry is well-established~\cite{valiev2010}. We apply similar ideas to VQE, benchmarking JIT compilation, GPU acceleration, and MPI distribution on modern hardware. Our contribution is a comparison of these techniques on a single HPC node with multiple GPUs, with each runtime reported together with its optimizer and stopping settings.
+MPI parallelization of quantum chemistry is well-established~\cite{valiev2010}. We apply the same distribution of independent work to VQE and measure JIT compilation, GPU simulation, and MPI distribution on one HPC node with four H100 GPUs. We report each runtime together with its optimizer and stopping settings.
 
 \section{Problem Description}
 
@@ -87,7 +87,7 @@ The goal is to compute the ground state energy $E_0$ of the H$_2$ molecule as a 
 
 where $\mathbf{r}_i$ are electron positions, $\mathbf{R}_A$ and $\mathbf{R}_B$ are nuclear positions separated by distance $d$, and atomic units are used.
 
-This continuous-space Hamiltonian must be converted to a finite basis set (we use STO-3G, a minimal basis set) and then transformed into qubit operators that quantum computers can work with using a method called the Jordan-Wigner transformation.
+We project this Hamiltonian onto the minimal STO-3G basis and map it to qubit operators with the Jordan-Wigner transformation.
 
 \subsection{Computational Task}
 
@@ -100,7 +100,7 @@ The specific computational problem is:
     \item \textbf{Objective}: Minimize total wall-clock time while maintaining accuracy
 \end{itemize}
 
-The key computational challenge is that each bond length requires:
+Each bond length requires:
 \begin{itemize}
     \item Hartree-Fock calculation to generate molecular Hamiltonian
     \item Up to 300 optimization steps, each with a cost and a gradient evaluation
@@ -113,13 +113,13 @@ On the cluster, the baseline runs 30,000 optimization steps in total (Section~\r
 
 \subsection{The Variational Principle}
 
-VQE uses the variational principle from quantum mechanics: for any trial wavefunction $|\psi(\theta)\rangle$ with adjustable parameters $\theta$, the energy we calculate will always be greater than or equal to the true ground state energy:
+VQE relies on the variational principle: for any normalized trial wavefunction $|\psi(\theta)\rangle$ with parameters $\theta$, the energy expectation value is bounded below by the ground-state energy,
 
 \begin{equation}
     E(\theta) = \langle \psi(\theta) | H | \psi(\theta) \rangle \geq E_0
 \end{equation}
 
-where $E_0$ is the true ground state energy and $H$ is the molecular Hamiltonian. By finding the parameters $\theta$ that give the lowest energy $E(\theta)$, we get a good approximation to the true ground state.
+where $E_0$ is the ground-state energy and $H$ is the molecular Hamiltonian. The minimum of $E(\theta)$ is an upper bound on $E_0$, and it is close to $E_0$ when the ansatz can represent a state close to the ground state.
 
 \subsection{Molecular Hamiltonian in Second Quantization}
 
@@ -136,7 +136,7 @@ where:
     \item $a_i^\dagger, a_i$ are fermionic creation and annihilation operators
 \end{itemize}
 
-These integrals are computed using the Hartree-Fock method with the STO-3G basis set, then mapped to Pauli operators on 4 qubits via the Jordan-Wigner transformation.
+PennyLane computes these integrals over the Hartree-Fock molecular orbitals of the STO-3G basis and maps the Hamiltonian to Pauli operators on 4 qubits with the Jordan-Wigner transformation.
 
 \subsection{Quantum Circuit Ansatz}
 
@@ -158,7 +158,7 @@ The double excitation gate is:
     U(\theta) = \exp\left(-i\frac{\theta}{2}(a_0^\dagger a_1^\dagger a_2 a_3 - a_3^\dagger a_2^\dagger a_1 a_0)\right)
 \end{equation}
 
-This ansatz captures the most important electron correlation effects in H$_2$ (both electrons moving together from bonding to antibonding orbitals) while only needing a single adjustable parameter $\theta$. From a computational perspective, this gate is a parameterized unitary matrix applied to the $2^N$-dimensional state vector. The optimization problem reduces to finding the parameter $\theta$ that minimizes a matrix expectation value, which maps naturally to gradient-based optimization.
+This ansatz describes the dominant correlation in H$_2$, the double excitation of both electrons from the bonding to the antibonding orbital, with a single parameter $\theta$. In simulation, the gate is a parameterized unitary applied to the $2^N$-dimensional state vector, and the optimization is a one-parameter minimization of an expectation value.
 
 \subsection{Optimization Problem}
 
@@ -168,7 +168,7 @@ The VQE algorithm finds the parameter value that gives the lowest energy:
     \theta^* = \arg\min_\theta E(\theta) = \arg\min_\theta \langle \psi(\theta) | H | \psi(\theta) \rangle
 \end{equation}
 
-We use the Adam optimizer with:
+The baseline uses the Adam optimizer with:
 \begin{itemize}
     \item Learning rate: $\alpha = 0.01$
     \item Iterations per bond configuration: $N_{\text{iter}} = 300$ (baseline; Section~\ref{sec:parallel_results} lists the settings of the other implementations)
@@ -179,7 +179,7 @@ We use the Adam optimizer with:
 
 \subsection{Problem Structure and Parallelization Opportunities}
 
-The computational task consists of computing the potential energy surface by evaluating $E(\theta^*)$ for $N_b = 100$ bond lengths in the range $[0.35, 3.0]$ \AA. For each bond length $d_i$:
+The potential energy surface requires $E(\theta^*)$ at $N_b = 100$ bond lengths in the range $[0.35, 3.0]$~\AA. For each bond length $d_i$, the baseline performs four steps:
 
 \begin{enumerate}
     \item Generate molecular Hamiltonian $H(d_i)$ using Hartree-Fock
@@ -188,7 +188,7 @@ The computational task consists of computing the potential energy surface by eva
     \item Store ground state energy $E_i = E(\theta^*_i)$
 \end{enumerate}
 
-These calculations are \textbf{embarrassingly parallel}: each bond length calculation is independent, requiring no data from other calculations:
+The bond lengths are independent of each other, so the scan is embarrassingly parallel:
 
 \begin{equation}
     E_i = f(d_i) \quad \text{for } i = 1, \ldots, 100
@@ -236,11 +236,10 @@ The baseline serial implementation follows Algorithm~\ref{alg:serial}.
 
 \subsection{Computational Complexity}
 
-Each quantum circuit evaluation requires $O(4^n)$ operations for an $n$-qubit system using classical simulation. For our 4-qubit system:
+A state-vector simulator stores $2^n$ amplitudes for $n$ qubits and applies each gate in $O(2^n)$ operations. For the 4-qubit H$_2$ problem:
 
 \begin{itemize}
     \item State vector dimension: $2^4 = 16$ complex amplitudes
-    \item Operations per circuit: $O(16^2) = O(256)$ for state preparation and measurement
     \item Gradient evaluations: one per optimization step
     \item Optimization steps per bond length: up to 300
     \item Total optimization steps: up to 30,000
@@ -248,14 +247,14 @@ Each quantum circuit evaluation requires $O(4^n)$ operations for an $n$-qubit sy
 
 \subsection{Proposed Parallelization Approaches}
 
-We propose a three-phase optimization strategy:
+Before the runs, we planned two parallelization approaches and recorded the expected gains.
 
 \subsubsection{Phase 1: JIT Compilation with JAX}
 
 \textbf{Method}: Apply Catalyst just-in-time (JIT) compilation to the cost function using JAX integration in PennyLane.
 Optax, a JAX-compatible optimizer library, is used in place of PennyLane's built-in Adam optimizer.
 
-\begin{lstlisting}[caption={JIT-compiled VQE cost function with Optax optimizer.}]
+\begin{lstlisting}[caption={Sketch of a JIT-compiled cost function with Optax. The implementation compiles the whole loop with Catalyst \texttt{@qjit}.}]
 @jax.jit
 @qml.qnode(dev, interface="jax")
 def cost_fn(params):
@@ -268,7 +267,7 @@ updates, opt_state = optimizer.update(grads, opt_state)
 params = optax.apply_updates(params, updates)
 \end{lstlisting}
 
-\textbf{Expected Speedup}: 2--5$\times$ from:
+\textbf{Expected speedup (planned, before the runs)}: 2--5$\times$ from:
 \begin{itemize}
     \item Pre-compiling the circuit and optimization for faster execution
     \item Combining operations to reduce memory access time
@@ -297,27 +296,16 @@ all_results = comm.gather(my_results, root=0)
 
 Each process runs JIT-compiled VQE independently on its assigned subset of bond lengths, with results gathered to the root process for aggregation.
 
-\textbf{Expected Speedup}: $0.8p$ for $p$ cores (slightly less than ideal due to communication overhead and individual JIT compilation time)
+\textbf{Expected speedup (planned, before the runs)}: $0.8p$ for $p$ cores, below the ideal $p$ because of communication and the JIT compilation on each rank.
 
-\subsubsection{Phase 3: Why MPI Over Ray}
+\subsubsection{Choice of MPI over Ray}
 
-We initially considered the Ray distributed computing framework for multi-node parallelization due to its high-level task-based API. However, during development we encountered persistent dependency conflicts between Ray and the PennyLane/Catalyst/JAX ecosystem. The Ray pip package repeatedly failed to install alongside PennyLane-Catalyst due to incompatible transitive dependencies, and attempts to resolve version constraints proved time-consuming without success.
-
-Given these practical constraints, we selected MPI (via \texttt{mpi4py}) as our distributed-memory solution. MPI offered several advantages for our use case:
-\begin{itemize}
-    \item \textbf{Mature HPC integration}: Native support on the ERAU Vega cluster with optimized OpenMPI
-    \item \textbf{Minimal overhead}: Direct scatter-gather communication patterns with no daemon processes
-    \item \textbf{Proven compatibility}: No conflicts with PennyLane, Catalyst, or JAX packages
-    \item \textbf{Static workload fit}: Our embarrassingly parallel workload (fixed bond lengths) does not require Ray's dynamic task scheduling
-\end{itemize}
-
-The MPI implementation uses the same JIT-compiled VQE runner as Phase 1, with each MPI rank independently compiling and executing its assigned subset of bond lengths. Results are gathered to the root process for aggregation and plotting.
-
-\textbf{Expected Speedup}: Near-linear scaling for $p \leq N_b$ processes, where $N_b = 100$ is the number of bond lengths
+We first considered the Ray framework for its task-based API. The Ray pip package failed to install alongside PennyLane-Catalyst because of conflicting transitive dependencies, and we did not resolve the version constraints. We therefore used MPI through \texttt{mpi4py}. OpenMPI is installed on the Vega cluster, \texttt{mpi4py} installed without conflicts next to PennyLane, Catalyst, and JAX, and the static split of 100 bond lengths needs no dynamic task scheduling.
 
 \subsection{Performance Prediction Model}
+\label{sec:prediction}
 
-Using Amdahl's law to predict strong scaling with $p$ processors:
+Amdahl's law predicts the strong-scaling speedup with $p$ processors:
 
 \begin{equation}
     S_p = \frac{1}{f_s + \frac{f_p}{p}}
@@ -325,11 +313,11 @@ Using Amdahl's law to predict strong scaling with $p$ processors:
 
 where:
 \begin{itemize}
-    \item $f_s \approx 0.05$ is the serial fraction (initialization, I/O, plotting)
-    \item $f_p \approx 0.95$ is the parallel fraction (VQE optimizations)
+    \item $f_s \approx 0.05$ is the assumed serial fraction (initialization, I/O, plotting)
+    \item $f_p \approx 0.95$ is the assumed parallel fraction (VQE optimizations)
 \end{itemize}
 
-Predicted speedups are shown in Table~\ref{tab:predictions}.
+Table~\ref{tab:predictions} lists the predicted speedups.
 
 \begin{table}[h]
     \centering
@@ -338,9 +326,9 @@ Predicted speedups are shown in Table~\ref{tab:predictions}.
         \textbf{Processors} & \textbf{Ideal Speedup} & \textbf{Predicted Speedup} \\
         \midrule
         4                   & 4.0$\times$            & 3.48$\times$               \\
-        8                   & 8.0$\times$            & 6.15$\times$               \\
-        16                  & 16.0$\times$           & 10.39$\times$              \\
-        40                  & 40.0$\times$           & 18.87$\times$              \\
+        8                   & 8.0$\times$            & 5.93$\times$               \\
+        16                  & 16.0$\times$           & 9.14$\times$               \\
+        40                  & 40.0$\times$           & 13.56$\times$              \\
         \bottomrule
     \end{tabular}
     \caption{Predicted parallel speedup using Amdahl's law with $f_s = 0.05$.}
@@ -370,9 +358,9 @@ The serial VQE implementation computes the H$_2$ potential energy surface across
     \label{tab:serial_performance}
 \end{table}
 
-The potential energy curve exhibits the expected physical behavior for H$_2$:
+The potential energy curve has the expected shape for H$_2$:
 \begin{itemize}
-    \item Bonding region at small bond lengths ($d < 0.74$ \AA)
+    \item Repulsive wall at short bond lengths ($d < 0.74$~\AA)
     \item Equilibrium bond length near $d_{\text{eq}} \approx 0.74$ \AA
     \item Dissociation to separated atoms at large distances ($d > 2.5$ \AA)
 \end{itemize}
@@ -382,7 +370,7 @@ Figure~\ref{fig:serial_pes} shows the computed potential energy surface.
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.8\textwidth]{../results/main_study/vqe_results.png}
-    \caption{H$_2$ potential energy surface computed with serial VQE implementation. The curve shows the characteristic bonding minimum near 0.74 \AA\ and dissociation behavior at large bond lengths.}
+    \caption{H$_2$ potential energy surface from the serial VQE implementation, with the minimum near 0.74~\AA\ and the approach to the dissociation limit at large bond lengths.}
     \label{fig:serial_pes}
 \end{figure}
 
@@ -397,13 +385,13 @@ We ran all implementations on the ERAU Vega HPC cluster (AMD EPYC 9654 CPUs, 4 N
 \begin{itemize}
     \item CPU: 2$\times$ AMD EPYC 9654 (96 cores each, 192 cores per node)
     \item Memory: 1.5 TB shared memory
-    \item GPU: 4$\times$ NVIDIA H100 PCIe (81 GB each, 320 GB total)
-    \item Interconnect: High-performance cluster interconnect
+    \item GPU: 4$\times$ NVIDIA H100 PCIe (80 GB each)
+    \item Interconnect: InfiniBand HDR
 \end{itemize}
 
 \subsubsection{Implementation 1: Serial Baseline with PennyLane}
 
-The serial implementation using PennyLane's AdamOptimizer served as our performance baseline:
+The serial implementation with PennyLane's AdamOptimizer is the baseline:
 
 \begin{itemize}
     \item \textbf{Runtime}: 593.95 seconds (9.90 minutes)
@@ -516,23 +504,23 @@ The multi-GPU benchmark uses a separate test problem: a sum of Pauli-$Z$ operato
 
 \subsection{Physical Interpretation of Results}
 
-The computed potential energy surface captures the essential quantum chemistry of the H$_2$ molecule:
+The computed potential energy surface has the expected features of H$_2$. The grid values below come from the Implementation~2 run.
 
-\textbf{Equilibrium Geometry:} The minimum energy occurs near $d_{\text{eq}} \approx 0.74$ \AA, matching the experimental value of 0.741 \AA.
+\textbf{Equilibrium Geometry:} The lowest energy on the grid lies at 0.725~\AA, and the next grid point is 0.752~\AA\ (grid spacing 0.027~\AA). The experimental bond length of 0.741~\AA\ lies between them.
 
-\textbf{Bonding Energy:} At equilibrium, the VQE energy is approximately $-1.137$ Hartree. The exact STO-3G value is $-1.1372$ Hartree, so our single-parameter ansatz achieves good accuracy.
+\textbf{Equilibrium Energy:} The lowest VQE energy on the grid is $-1.137217$~Ha at 0.725~\AA. Exact diagonalization of the same STO-3G qubit Hamiltonian in the two-electron sector gives $-1.137221$~Ha, a difference of $4\times10^{-6}$~Ha.
 
-\textbf{Dissociation Behavior:} Beyond 2.5 \AA, the energy approaches the separated-atom limit. The curve shows the expected behavior, though the single-parameter ansatz has known limitations in the dissociation region where electron correlation is strong.
+\textbf{Dissociation Behavior:} Beyond 2.5~\AA, the energy approaches the separated-atom limit.
 
-\textbf{Ansatz Effectiveness:} The double excitation ansatz with a single parameter works well for H$_2$ near equilibrium. The dominant correlation effect in H$_2$ is both electrons moving from the bonding ($\sigma$) to antibonding ($\sigma^*$) orbital, which is what the double excitation operator captures.
+\textbf{Ansatz:} In the STO-3G basis, the ground state of H$_2$ lies in the span of the Hartree-Fock state $|1100\rangle$ and its double excitation $|0011\rangle$, because single excitations change the spatial symmetry. The single-parameter double excitation ansatz can therefore represent the exact STO-3G ground state at every bond length. Exact diagonalization at 0.35, 0.725, 1.5, and 3.0~\AA\ confirms that the ground state has unit weight in this two-dimensional span.
 
-\textbf{HPC Focus:} The physical results above validate our VQE implementation, but this paper focuses on HPC parallelization. The quantum chemistry here is a representative workload; the parallelization techniques apply to other variational quantum algorithms.
+\textbf{HPC Focus:} These results check the VQE implementation. The rest of the paper treats the scan as an HPC workload.
 
 \subsection{Computational Performance Analysis}
 
 \textbf{Serial Baseline:} The preliminary serial run (Table~\ref{tab:serial_performance}) achieves 157.98 circuit evaluations per second. On the cluster, the baseline takes 593.95 seconds for 100 bond lengths with 300 iterations each.
 
-\textbf{Bottleneck Identification:} Profiling with Python's \texttt{cProfile} confirmed that VQE optimization dominates runtime. Gradient computation (\texttt{\_grad\_with\_forward}) and cost function evaluation (\texttt{qnode.\_\_call\_\_}) account for 28.2 seconds of the 32.7 second total (86\%). Excluding I/O and plotting, over 95\% of work is in the VQE loops ($f_p \approx 0.95$), which is favorable for parallelization.
+\textbf{Bottleneck Identification:} We profiled a serial run with 10 bond lengths and 50 iterations with Python's \texttt{cProfile}. QNode calls (\texttt{qnode.\_\_call\_\_}), which include the gradient computation (\texttt{\_grad\_with\_forward}), take 28.2~s of the 32.7~s runtime (86\%). The Amdahl estimate in Section~\ref{sec:prediction} assumes a parallel fraction of 0.95, higher than this measured 0.86.
 
 \textbf{Iteration Count:} On one core, the largest runtime reduction comes from fewer iterations. Early stopping, a larger learning rate, and warm starts cut the iteration count by a factor of 4.3 and the runtime by a factor of 4.13 (Implementation~2).
 
@@ -576,7 +564,7 @@ The bond-length scan is a parameter sweep in which each point is an independent 
 
 \section{Changes in Version 2}
 
-Version~1 of this preprint attributed a 4.13$\times$ runtime reduction to JIT compilation, reported an MPI speedup of 28.5$\times$ and a combined speedup of 117$\times$, and reported 99.4\% multi-GPU parallel efficiency. Version~2 corrects these statements. The 4.13$\times$ reduction tracks a 4.3$\times$ reduction in iteration count from early stopping, a larger learning rate, and warm starts. The MPI speedups compared jobs with different resource allocations, and version~2 withdraws them; the measured MPI runtimes remain. The 99.4\% figure divided the sum of per-GPU times by four times the longest per-GPU time, so it measured load balance, not speedup. Version~2 also corrects the description of the scaling-study Hamiltonian (transverse-field Ising, not a sum of Pauli-$Z$ operators), states the software differences between the CPU and GPU paths, and removes the figure built on the withdrawn speedups.
+Version~1 of this preprint attributed a 4.13$\times$ runtime reduction to JIT compilation, reported an MPI speedup of 28.5$\times$ and a combined speedup of 117$\times$, and reported 99.4\% multi-GPU parallel efficiency. Version~2 corrects these statements. The 4.13$\times$ reduction tracks a 4.3$\times$ reduction in iteration count from early stopping, a larger learning rate, and warm starts. The MPI speedups compared jobs with different resource allocations, and version~2 withdraws them; the measured MPI runtimes remain. The 99.4\% figure divided the sum of per-GPU times by four times the longest per-GPU time, so it measured load balance, not speedup. Version~2 also corrects the description of the scaling-study Hamiltonian (transverse-field Ising, not a sum of Pauli-$Z$ operators), states the software differences between the CPU and GPU paths, and removes the figure built on the withdrawn speedups. It also corrects three entries of the Amdahl prediction table, the bond-length range (0.35 to 3.0~\AA, not 0.1 to 3.0~\AA), and the baseline iteration count (300, not 200).
 
 \section{Acknowledgements}
 
